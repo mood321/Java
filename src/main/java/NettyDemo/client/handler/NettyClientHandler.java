@@ -36,7 +36,10 @@ public class NettyClientHandler extends SimpleChannelInboundHandler<BaseMsg>{
         }
     }
 
-    protected void messageReceived(ChannelHandlerContext channelHandlerContext, BaseMsg baseMsg) throws Exception {
+
+
+    @Override
+    protected void channelRead0(ChannelHandlerContext channelHandlerContext, BaseMsg baseMsg) throws Exception {
         MsgType msgType=baseMsg.getType();
         switch (msgType){
             case LOGIN:{
@@ -61,19 +64,16 @@ public class NettyClientHandler extends SimpleChannelInboundHandler<BaseMsg>{
                 System.out.println("receive client msg: "+replyServerBody.getServerInfo());
             }break;
             case LOGIN_REPLY:{
-            	//ReplyClientBody replyClientBody=new ReplyClientBody("client info **** !!!");
-                
-            	LoginReplyMsg loginReplyMsg = (LoginReplyMsg)baseMsg;
-            	Constants.setClientId(loginReplyMsg.getLoginToken());
+                //ReplyClientBody replyClientBody=new ReplyClientBody("client info **** !!!");
+
+                LoginReplyMsg loginReplyMsg = (LoginReplyMsg)baseMsg;
+                Constants.setClientId(loginReplyMsg.getLoginToken());
             }break;
-            
+
             default:break;
         }
         ReferenceCountUtil.release(msgType);
     }
 
-    @Override
-    protected void channelRead0(ChannelHandlerContext channelHandlerContext, BaseMsg baseMsg) throws Exception {
 
-    }
 }

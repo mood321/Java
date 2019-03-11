@@ -27,12 +27,15 @@ public class NettyServerHandler extends SimpleChannelInboundHandler<BaseMsg> {
         NettyChannelMap.remove((SocketChannel)ctx.channel());
     }
 
-    protected void messageReceived(ChannelHandlerContext channelHandlerContext, BaseMsg baseMsg) throws Exception {
- 
+
+
+    @Override
+    protected void channelRead0(ChannelHandlerContext channelHandlerContext, BaseMsg baseMsg) throws Exception {
+
         if(MsgType.LOGIN.equals(baseMsg.getType())){
             LoginMsg loginMsg=(LoginMsg)baseMsg;
             if("robin".equals(loginMsg.getUserName())&&"yao".equals(loginMsg.getPassword())){
-            	//登录成功,把channel存到服务端的map中
+                //登录成功,把channel存到服务端的map中
                 String loginToken = NettyChannelMap.add((SocketChannel)channelHandlerContext.channel());
                 System.out.println("client"+loginMsg.getUserName()+" 登录成功");
                 LoginReplyMsg loginReplyMsg = new LoginReplyMsg();
@@ -40,38 +43,38 @@ public class NettyServerHandler extends SimpleChannelInboundHandler<BaseMsg> {
                 loginReplyMsg.setLoginToken(loginToken);
                 channelHandlerContext.channel().writeAndFlush(loginReplyMsg);
             }else{
-            	 System.out.println("client"+loginMsg.getUserName()+" 登录失败");
-            	 LoginReplyMsg loginReplyMsg = new LoginReplyMsg();
-            	 loginReplyMsg.setSuccese(false);
-                 //loginReplyMsg.setLoginToken(loginToken);
-                 channelHandlerContext.channel().writeAndFlush(loginReplyMsg);
+                System.out.println("client"+loginMsg.getUserName()+" 登录失败");
+                LoginReplyMsg loginReplyMsg = new LoginReplyMsg();
+                loginReplyMsg.setSuccese(false);
+                //loginReplyMsg.setLoginToken(loginToken);
+                channelHandlerContext.channel().writeAndFlush(loginReplyMsg);
             }
             return;
         }else{
-        	String clientId = baseMsg.getClientId();
-        	if(clientId == null){
-        		 //说明未登录，或者连接断了，服务器向客户端发起登录请求，让客户端重新登录
+            String clientId = baseMsg.getClientId();
+            if(clientId == null){
+                //说明未登录，或者连接断了，服务器向客户端发起登录请求，让客户端重新登录
                 LoginMsg loginMsg=new LoginMsg();
                 channelHandlerContext.channel().writeAndFlush(loginMsg);
-        		return ;
-        	}
-        	Channel channel = NettyChannelMap.get(clientId);
-            if(channel==null){
-                    //说明未登录，或者连接断了，服务器向客户端发起登录请求，让客户端重新登录
-                    LoginMsg loginMsg=new LoginMsg();
-                    channelHandlerContext.channel().writeAndFlush(loginMsg);
-                    return;
+                return ;
             }
-            
-            Channel currentChannel = channelHandlerContext.channel();
-            if(currentChannel != channel){
-            	 //登陆id不匹配
+            Channel channel = NettyChannelMap.get(clientId);
+            if(channel==null){
+                //说明未登录，或者连接断了，服务器向客户端发起登录请求，让客户端重新登录
                 LoginMsg loginMsg=new LoginMsg();
                 channelHandlerContext.channel().writeAndFlush(loginMsg);
                 return;
             }
-            
-            
+
+            Channel currentChannel = channelHandlerContext.channel();
+            if(currentChannel != channel){
+                //登陆id不匹配
+                LoginMsg loginMsg=new LoginMsg();
+                channelHandlerContext.channel().writeAndFlush(loginMsg);
+                return;
+            }
+
+
         }
         switch (baseMsg.getType()){
             case PING:{
@@ -97,17 +100,12 @@ public class NettyServerHandler extends SimpleChannelInboundHandler<BaseMsg> {
                 System.out.println("receive client msg: "+clientBody.getClientInfo());
             }break;
             case LOGOUT:{
-            	NettyChannelMap.remove((SocketChannel)channelHandlerContext.channel());
-            	
+                NettyChannelMap.remove((SocketChannel)channelHandlerContext.channel());
+
             }break;
-            
+
             default:break;
         }
         ReferenceCountUtil.release(baseMsg);
-    }
-
-    @Override
-    protected void channelRead0(ChannelHandlerContext channelHandlerContext, BaseMsg baseMsg) throws Exception {
-
     }
 }

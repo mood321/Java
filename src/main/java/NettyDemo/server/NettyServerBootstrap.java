@@ -2,6 +2,7 @@ package NettyDemo.server;
 
 import java.util.concurrent.TimeUnit;
 
+import NettyDemo.message.AskMsg;
 import NettyDemo.server.handler.NettyServerHandler;
 
 import io.netty.bootstrap.ServerBootstrap;
@@ -53,15 +54,15 @@ public class NettyServerBootstrap {
     }
     public static void main(String []args) throws InterruptedException {
         NettyServerBootstrap bootstrap=new NettyServerBootstrap(9999);
-        while (true){
-            /*SocketChannel channel=(SocketChannel)NettyChannelMap.get("101");
+     /*   while (true){
+         *//*  SocketChannel channel=(SocketChannel)NettyChannelMap.get("101");
             if(channel!=null){
                 AskMsg askMsg=new AskMsg();
                 channel.writeAndFlush(askMsg);
-            }
-            TimeUnit.SECONDS.sleep(5);*/
+            }*//*
+            TimeUnit.SECONDS.sleep(5);
         	//System.out.println(NettyChannelMap.getKeys());
-        	TimeUnit.SECONDS.sleep(15);
-        }
+        //	TimeUnit.SECONDS.sleep(15);
+        }*/
     }
 }

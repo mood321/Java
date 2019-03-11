@@ -52,6 +52,7 @@ public class NettyClientBootstrap {
             socketChannel = (SocketChannel)future.channel();
             System.out.println("connect server  成功---------");
         }
+        
     }
     public static void main(String[]args) throws InterruptedException {
         //Constants.setClientId("101");
@@ -63,14 +64,14 @@ public class NettyClientBootstrap {
         bootstrap.socketChannel.writeAndFlush(loginMsg);
         while (true){
             TimeUnit.SECONDS.sleep(15);
-	           /* AskMsg askMsg=new AskMsg();
+	           /*AskMsg askMsg=new AskMsg();
 	            askMsg.setClientId(Constants.getClientId());
 	            AskParams askParams=new AskParams();
 	            askParams.setAuth("authToken");
 	            askMsg.setParams(askParams);
-	            bootstrap.socketChannel.writeAndFlush(askMsg);*/
+	            bootstrap.socketChannel.writeAndFlush(askMsg);*//*
 
-	          /*  PingMsg pingMsg = new PingMsg();
+	           PingMsg pingMsg = new PingMsg();
 	            pingMsg.setClientId(Constants.getClientId());
 	            System.out.println("send ping from client----------"+new Date());
 
