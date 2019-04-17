@@ -1,4 +1,4 @@
-package 三种io对比.BIO;
+package IO.BIO;
 
 import java.io.BufferedReader;
 import java.io.IOException;
