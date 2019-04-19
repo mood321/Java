@@ -1,4 +1,4 @@
-package ThreadPool;
+package ThreadPool.线程池使用;
 
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;

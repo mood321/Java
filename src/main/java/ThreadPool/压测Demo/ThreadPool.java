@@ -1,4 +1,4 @@
-package ThreadPool.demo;
+package ThreadPool.压测Demo;
 
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
