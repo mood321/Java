@@ -1,4 +1,4 @@
-package proxy;
+package proxy.jdk;
 
 import java.lang.reflect.InvocationHandler;
 import java.lang.reflect.Method;
@@ -12,9 +12,10 @@ public class Proxy implements InvocationHandler {
     }
 
 
+    @Override
     public Object invoke(Object proxy, Method method, Object[] args) throws Throwable {
         System.out.println("defaultProxy is  run");
-        return method.invoke(proxyed);
+        return method.invoke(proxyed,args);
     }
 
     public static void main(String[] args) {

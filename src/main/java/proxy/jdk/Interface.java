@@ -1,4 +1,4 @@
-package proxy;
+package proxy.jdk;
 
 public interface Interface {
     public void sayHi();
