@@ -9,8 +9,6 @@ import io.netty.channel.ChannelInboundHandlerAdapter;
 import io.netty.util.CharsetUtil;
 
 /**
- * 作者：Mark/Maoke
- * 创建日期：2018/08/25
  * 类说明：自己的业务处理
  */
 /*指明我这个handler可以在多个channel之间共享，意味这个实现必须线程安全的。*/
