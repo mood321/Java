@@ -130,8 +130,13 @@ public class MethodAddCode {
       /*  MyClassLoader classLoader = new MyClassLoader();
         Class<?> cls = classLoader.defineClassPublic(fullName, bytes, 0, bytes.length);*/
         try {
-            Class cls = Class.forName("dynamic.asm.bean.Demo");
-
+            //不重新加载
+           // Class cls = Class.forName("dynamic.asm.bean.Demo");
+            //一样 已有不重新加载
+          //  Class cls = Demo.class.getClassLoader().loadClass("dynamic.asm.bean.Demo");
+            MyClassLoader myClassLoader = new MyClassLoader();
+            
+            Class cls = myClassLoader.findClass("dynamic.asm.bean.Demo");
             Object o = cls.newInstance();
             Method getDemoInfo = cls.getMethod("getDemoInfo");
             getDemoInfo.invoke(o);

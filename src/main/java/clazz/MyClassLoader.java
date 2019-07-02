@@ -16,7 +16,7 @@ public class MyClassLoader extends ClassLoader{
 //  }
 
     @Override
-    protected Class<?> findClass(String name) throws ClassNotFoundException {
+    public Class<?> findClass(String name) throws ClassNotFoundException {
         String classPath = MyClassLoader.class.getResource("/").getPath(); //得到classpath
         String fileName = name.replace(".", "/") + ".class" ;
         File classFile = new File(classPath , fileName);
@@ -47,7 +47,10 @@ public class MyClassLoader extends ClassLoader{
                 e.printStackTrace();
             }
         }
-        return defineClass(bos.toByteArray() , 0 , bos.toByteArray().length) ;
+        byte[] bytes = bos.toByteArray();
+        return defineClass(name,
+                bytes, 0, bytes.length);
+
     }
 
 
