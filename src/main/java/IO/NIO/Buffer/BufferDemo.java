@@ -21,7 +21,7 @@ public class BufferDemo {
     }
 
     private static void buferrMethod() {
-        System.out.println("------Test get-------------");
+        System.out.println("------testanno get-------------");
         ByteBuffer buffer = ByteBuffer.allocate(32);
         buffer
                 .put((byte) 'a')//0
@@ -46,7 +46,7 @@ public class BufferDemo {
         System.out.println("after get(dst, 0, 2):" + buffer);
         System.out.println("dst:" + new String(dst));
 
-        System.out.println("--------Test put-------");
+        System.out.println("--------testanno put-------");
         ByteBuffer bb = ByteBuffer.allocate(32);
         System.out.println("before put(byte):" + bb);
         System.out.println("after put(byte):" + bb.put((byte) 'z'));
@@ -60,7 +60,7 @@ public class BufferDemo {
         System.out.println("after put(buffer):" + bb);
         System.out.println(new String(bb.array()));
 
-        System.out.println("--------Test reset----------");
+        System.out.println("--------testanno reset----------");
         buffer = ByteBuffer.allocate(20);
         System.out.println("buffer = " + buffer);
         buffer.clear();
@@ -71,7 +71,7 @@ public class BufferDemo {
         buffer.reset();//复位position到记录的地址
         System.out.println("after reset:" + buffer);
 
-        System.out.println("--------Test rewind--------");
+        System.out.println("--------testanno rewind--------");
         buffer.clear();
         buffer.position(10);//移动position到10
         buffer.limit(15);//限定最大可写入的位置为15
@@ -79,7 +79,7 @@ public class BufferDemo {
         buffer.rewind();//将position设回0
         System.out.println("before rewind:" + buffer);
 
-        System.out.println("--------Test compact--------");
+        System.out.println("--------testanno compact--------");
         buffer.clear();
         //放入4个字节，position移动到下个可写入的位置，也就是4
         buffer.put("abcd".getBytes());

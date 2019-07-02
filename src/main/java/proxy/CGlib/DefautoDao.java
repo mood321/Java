@@ -17,9 +17,11 @@ public class DefautoDao implements MethodInterceptor {
     }
 
     public static void main(String[] args) {
+        //
         DefautoDao daoProxy = new DefautoDao();
 
         Enhancer enhancer = new Enhancer();
+
         enhancer.setSuperclass(CglibInterface.class);
         enhancer.setCallback(daoProxy);
         CglibInterface o = (CglibInterface)enhancer.create();

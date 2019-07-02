@@ -7,8 +7,10 @@ import io.netty.channel.EventLoopGroup;
 import io.netty.channel.nio.NioEventLoopGroup;
 import io.netty.channel.socket.SocketChannel;
 import io.netty.channel.socket.nio.NioServerSocketChannel;
+import io.netty.handler.timeout.IdleStateHandler;
 
 import java.net.InetSocketAddress;
+import java.util.concurrent.TimeUnit;
 
 /**
  * 类说明：
@@ -46,6 +48,7 @@ public class EchoServer  {
                         @Override
                         protected void initChannel(SocketChannel ch) throws Exception {
                             ch.pipeline().addLast(new EchoServerHandler());
+                            ch.pipeline().addLast("idleStateHandler",new IdleStateHandler(2000,2000,2000, TimeUnit.MILLISECONDS));
                         }
                     });
             ChannelFuture f = b.bind().sync();/*绑定到端口，阻塞等待直到连接完成*/

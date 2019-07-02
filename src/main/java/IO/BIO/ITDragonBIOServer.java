@@ -22,7 +22,7 @@ import java.util.concurrent.TimeUnit;
  */
 public class ITDragonBIOServer {
 
-	private static final Integer PORT = 8888; // 服务器对外的端口号
+	private static final Integer PORT = 8080; // 服务器对外的端口号
 
 	public static void main(String[] args) {
 		ServerSocket server = null;
