@@ -30,3 +30,7 @@
        - 现有线程池使用 基本线程 并发工具 CountDownLatch 未完 未整理
             -[线程知识](https://github.com/mood321/JavaDemo/tree/master/src/main/java/ThreadPool "创作你的创作")
    
+   +   动态修改字节码
+       - 动态修改字节码  asm未完 
+            -[动态修改字节码](https://github.com/mood321/JavaDemo/tree/master/src/main/java/dynamic "创作你的创作")
+   
