@@ -39,4 +39,8 @@
         - 添加spring拦截器 拦截重复提交请求
               -[spring模块](https://github.com/mood321/JavaDemo/tree/master/src/main/java/spring "spring")
                        
+   +   学习笔记
+        - 添加jvm笔记
+              -[jvm学习笔记](https://github.com/mood321/JavaDemo/blob/master/src/main/resources/note/JVM%E5%AD%A6%E4%B9%A0%E7%AC%94%E8%AE%B0.md)
+                       
    
