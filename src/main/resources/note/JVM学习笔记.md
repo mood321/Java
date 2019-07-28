@@ -283,7 +283,7 @@
            JVM 通过双亲委派模型进行类的加载，当然我们也可以通过继承 java.lang.ClassLoader
            实现自定义的类加载器
             ```` 
-       ![演示图](https://github.com/mood321/JavaDemo/tree/master/src/main/resources/img-demo/类加载.jpg)
+       ![演示图](https://s2.ax1x.com/2019/07/28/elbJ0A.jpg)
    +  双亲委派
         ````
         当一个类收到了类加载请求，他首先不会尝试自己去加载这个类，而是把这个请求委派给父
