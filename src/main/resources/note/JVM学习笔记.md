@@ -16,14 +16,44 @@
    ````
     线程共享 存储了类信息 静态变量 常量池等信息
    ````
+   - 常用参数
+    ````
+    -XX:PermSize 和 -XX:MaxPermSize  //永久代(方法区)大小 
+    ````
+    - -XX:PermSize 和 -XX:MaxPermSize：指定JVM中的永久代(方法区)的大小。可以看到：永久代不属于堆内存，堆内存只包含新生代和老年代
+         
    - 不同:在JDK8中正式移除方法区 元数据区直接使用堆外内存元空间 由本地内存控制
    #### Java堆 []()
    ````
     线程共享 Java对象实例都存放在Java堆  
    ````
+   - Java堆 的常见配置参数
+      ````
+      -Xmx10240m -Xms10240m  //堆初始大小和最大
+      -Xmn5120m              //新生代最大内存
+      -XXSurvivorRatio=3     // 新生代中Eden和Survivor 的占比 Survior默认为2
+      -XX:NewRatio=4         // 堆中新生代和老年代占比 新生代默认为1
+      -XX:OldSize            // 老年代初始大小。。。 
+      
+      ````  
+      + -Xms 和 -Xmx (-XX:InitialHeapSize 和 -XX:MaxHeapSize)：指定JVM初始占用的堆内存和最大堆内存。JVM也是一个软件，也必须要获取本机的物理内
+           存，然后JVM会负责管理向操作系统申请到的内存资源。JVM启动的时候会向操作系统申请 -Xms 设置的内存，JVM启动后运行一段时间，如果发现内存空间
+           不足，会再次向操作系统申请内存。JVM能够获取到的最大堆内存是-Xmx设置的值。
+      +  -XX:NewSize 和 -Xmn(-XX:MaxNewSize)：指定JVM启动时分配的新生代内存和新生代最大内存。
+      
+      + -XX:SurvivorRatio：设置新生代中1个Eden区与1个Survivor区的大小比值。在hotspot虚拟机中，新生代 = 1个Eden + 2个Survivor。如果新生代内存是10M，SurvivorRatio=8，那么Eden区占8M，2个Survivor区各占1M。
+      
+      + -XX:NewRatio：指定老年代/新生代的堆内存比例。在hotspot虚拟机中，堆内存 = 新生代 + 老年代。如果-XX:NewRatio=4表示年轻代与年老代所占比值为1:4,年轻代
+        占整个堆内存的1/5。在设置了-XX:MaxNewSize的情况下，-XX:NewRatio的值会被忽略，老年代的内存=堆内存 - 新生代内存。老年代的最大内存 = 堆内存 - 新生代 最大内存。
+      
+      + -XX:OldSize：设置JVM启动分配的老年代内存大小，类似于新生代内存的初始大小-XX:NewSize
+      
+   ps: 堆内存、新生代内存、老年代内存、永久代内存，都有一个初始内存，还有一个最大内存
+      
    - VM 采用分代收集算法,  Java 堆从 GC 的角度还可以细分为: 新生代( Eden 区 、 From Survivor 区 和 To Survivor 区 )和老年代。
    - 新生代(MinorGC)
-       ```` 是用来存放新生的对象。一般占据堆的1/3空间。由于频繁创建对象，所以新生代会频繁触发
+       ```` 
+       是用来存放新生的对象。一般占据堆的1/3空间。由于频繁创建对象，所以新生代会频繁触发
         MinorGC 进行垃圾回收。新生代又分为 Eden 区、ServivorFrom、ServivorTo 三个区 
         -XXSurvivorRatio：Eden区和Survior区的占用比例 
         ````
@@ -34,6 +64,10 @@
         一次垃圾回收。
         ````
      - ServivorFrom 区 
+        ````
+        上一次 GC 的幸存者，作为这一次 GC 的被扫描者
+        ````
+     - ServivorTo 区 
         ````
         上一次 GC 的幸存者，作为这一次 GC 的被扫描者
         ````
