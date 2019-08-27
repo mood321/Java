@@ -42,6 +42,7 @@
    +   学习笔记
         - 添加jvm笔记
               -[jvm学习笔记](https://github.com/mood321/JavaDemo/blob/master/src/main/resources/note/JVM%E5%AD%A6%E4%B9%A0%E7%AC%94%E8%AE%B0.md)
+        - 添加java多线程学习笔记
               -[java多线程学习笔记](https://github.com/mood321/JavaDemo/blob/master/src/main/resources/note/Java多线程学习笔记-多线程.md)
                        
    

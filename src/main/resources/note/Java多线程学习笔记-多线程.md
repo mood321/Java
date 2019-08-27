@@ -167,3 +167,251 @@
         了优化。引入了偏向锁和轻量级锁。都是在对象头中有标记位，不需要经过操作系统加锁。
         10. 锁可以从偏向锁升级到轻量级锁，再升级到重量级锁。这种升级过程叫做锁膨胀；
         11. JDK 1.6 中默认是开启偏向锁和轻量级锁，可以通过-XX:-UseBiasedLocking 来禁用偏向锁
+     - ReentrantLock 
+        ````
+        ReentantLock 继承接口 Lock 并实现了接口中定义的方法，他是一种可重入锁，除了能完
+        成 synchronized 所能完成的所有工作外，还提供了诸如可响应中断锁、可轮询锁请求、定时锁等
+        避免多线程死锁的方法
+        ````
+        + Lock 接口的主要方法
+            
+            1.  void lock(): 执行此方法时, 如果锁处于空闲状态, 当前线程将获取到锁. 相反, 如果锁已经
+            被其他线程持有, 将禁用当前线程, 直到当前线程获取到锁.
+            2.  boolean tryLock()：如果锁可用, 则获取锁, 并立即返回 true, 否则返回 false. 该方法和
+            lock()的区别在于, tryLock()只是"试图"获取锁, 如果锁不可用, 不会导致当前线程被禁用,
+            当前线程仍然继续往下执行代码. 而 lock()方法则是一定要获取到锁, 如果锁不可用, 就一
+            直等待, 在未获得锁之前,当前线程并不继续向下执行.
+            3.  void unlock()：执行此方法时, 当前线程将释放持有的锁. 锁只能由持有者释放, 如果线程
+            并不持有锁, 却执行该方法, 可能导致异常的发生.
+            4.  Condition newCondition()：条件对象，获取等待通知组件。该组件和当前的锁绑定，
+            当前线程只有获取了锁，才能调用该组件的 await()方法，而调用后，当前线程将缩放锁。
+            5.  getHoldCount() ：查询当前线程保持此锁的次数，也就是执行此线程执行lock方法的次
+            数。
+            6.  getQueueLength（）：返回正等待获取此锁的线程估计数，比如启动 10 个线程，1 个
+            线程获得锁，此时返回的是 9
+            7.  getWaitQueueLength：（Condition condition）返回等待与此锁相关的给定条件的线
+            程估计数。比如 10 个线程，用同一个 condition 对象，并且此时这 10 个线程都执行了
+            condition 对象的 await 方法，那么此时执行此方法返回 10
+            8.  hasWaiters(Condition condition)：查询是否有线程等待与此锁有关的给定条件
+            (condition)，对于指定 contidion 对象，有多少线程执行了 condition.await 方法
+            9.  hasQueuedThread(Thread thread)：查询给定线程是否等待获取此锁
+            10. hasQueuedThreads()：是否有线程等待此锁
+            11. isFair()：该锁是否公平锁
+            12. isHeldByCurrentThread()： 当前线程是否保持锁锁定，线程的执行 lock 方法的前后分
+            别是 false 和 true
+            13. isLock()：此锁是否有任意线程占用
+            14. lockInterruptibly（）：如果当前线程未被中断，获取锁
+            15. tryLock（）：尝试获得锁，仅在调用时锁未被线程占用，获得锁
+            16. tryLock(long timeout TimeUnit unit)：如果锁在给定等待时间内没有被另一个线程保持，
+            则获取该锁。
+        + 非公平锁
+            ````
+            JVM 按随机、就近原则分配锁的机制则称为不公平锁，ReentrantLock 在构造函数中提供了
+            是否公平锁的初始化方式，默认为非公平锁。非公平锁实际执行的效率要远远超出公平锁，除非
+            程序有特殊需要，否则最常用非公平锁的分配机制
+     
+        +  公平锁
+            ````
+            公平锁指的是锁的分配机制是公平的，通常先对锁提出获取请求的线程会先被分配到锁，
+            ReentrantLock 在构造函数中提供了是否公平锁的初始化方式来定义公平锁。
+           ````
+        +  ReentrantLock  与 synchronized
+            1.  ReentrantLock 通过方法 lock()与 unlock()来进行加锁与解锁操作，与 synchronized 会
+            被 JVM 自动解锁机制不同，ReentrantLock 加锁后需要手动进行解锁。为了避免程序出
+            现异常而无法正常解锁的情况，使用 ReentrantLock 必须在 finally 控制块中进行解锁操
+            作。
+            2.  ReentrantLock 相比 synchronized 的优势是可中断、公平锁、多个锁。这种情况下需要
+            使用 ReentrantLock。
+            
+            + ReentrantLock 实现
+                ````
+                    private Lock lock = new ReentrantLock();
+                    //Lock lock=new ReentrantLock(true);//公平锁
+                    //Lock lock=new ReentrantLock(false);//非公平锁
+                    private Condition condition=lock.newCondition();//创建 Condition
+                    public void testMethod() {
+                    try {
+                    lock.lock();//lock 加锁
+                    //1：wait 方法等待：
+                    //System.out.println("开始 wait");
+                    condition.await();
+                    //通过创建 Condition 对象来使线程 wait，必须先执行 lock.lock 方法获得锁
+                    //:2：signal 方法唤醒
+                    condition.signal();//condition 对象的 signal 方法可以唤醒 wait 线程
+                    for (int i = 0; i < 5; i++) {
+                    System.out.println("ThreadName=" + Thread.currentThread().getName()+ (" " + (i + 1)));
+                    }
+                    } catch (InterruptedException e) {
+                    e.printStackTrace();
+                    }
+                    finally{
+                           lock.unlock();
+                           }
+                ````
+            + Condition 类和 Object 类锁方法区别区别
+              1.  Condition 类的 awiat 方法和 Object 类的 wait 方法等效
+              2.  Condition 类的 signal 方法和 Object 类的 notify 方法等效
+              3.  Condition 类的 signalAll 方法和 Object 类的 notifyAll 方法等效
+              4.  ReentrantLock 类可以唤醒指定条件的线程，而 object 的唤醒是随机的
+            
+            + tryLock 和 lock 和 lockInterruptibly 的区别
+              1.  tryLock 能获得锁就返回 true，不能就立即返回 false，tryLock(long timeout,TimeUnit
+              unit)，可以增加时间限制，如果超过该时间段还没获得锁，返回 false
+              2.  lock 能获得锁就返回 true，不能的话一直等待获得锁
+              3.  lock 和 lockInterruptibly，如果两个线程分别执行这两个方法，但此时中断这两个线程，
+              lock 不会抛出异常，而 lockInterruptibly 会抛出异常。
+     - Semaphore 信号量
+        ````
+        Semaphore 是一种基于计数的信号量。它可以设定一个阈值，基于此，多个线程竞争获取许可信
+        号，做完自己的申请后归还，超过阈值后，线程申请许可信号将会被阻塞。Semaphore 可以用来
+        构建一些对象池，资源池之类的，比如数据库连接池
+        ````
+        + 实现互斥锁（计数器为 1 ）
+          ````
+          我们也可以创建计数为 1 的 Semaphore，将其作为一种类似互斥锁的机制，这也叫二元信号量，
+          表示两种互斥状态
+            
+        + 代码实现
+            ````
+                // 创建一个计数阈值为 5 的信号量对象
+                // 只能 5 个线程同时访问
+                Semaphore semp = new Semaphore(5);
+                try {  // 申请许可
+                semp.acquire();
+                try {
+                // 业务逻辑
+                } catch (Exception e) {
+                } finally {
+                // 释放许可
+                semp.release();
+                }
+                } catch (InterruptedException e) {
+                }
+            ````
+     + AtomicInteger
+        ````
+        首先说明，此处 AtomicInteger，一个提供原子操作的 Integer 的类，常见的还有
+        AtomicBoolean、AtomicInteger、AtomicLong、AtomicReference 等，他们的实现原理相同，
+        区别在与运算对象类型的不同。令人兴奋地，还可以通过 AtomicReference<V>将一个对象的所
+        有操作转化成原子操作
+        我们知道，在多线程程序中，诸如++i 或 i++等运算不具有原子性，是不安全的线程操作之一。
+        通常我们会使用 synchronized 将该操作变成一个原子操作，但 JVM 为此类操作特意提供了一些
+        同步类，使得使用更方便，且使程序运行效率变得更高。通过相关资料显示，通常AtomicInteger
+        的性能是 ReentantLock 的好几倍
+        ````
+       - CAS的原理(Unsafe方法里面提供了allocateMemory，freeMemory等开辟空间和释放空间的本地方法)
+            ````
+             CAS(Compare And Swap)，指令级别保证这是一个原子操作
+             三个运算符：  一个内存地址V，一个期望的值A，一个新值B
+             基本思路：如果地址V上的值和期望的值A相等，就给地址V赋给新值B，如果不是，不做任何操作。
+             循环（死循环，自旋）里不断的进行CAS操作
+       - CAS的问题
+           ````
+            A---》B----》A，加版本号
+            CAS操作长期不成功，cpu不断的循环
+       -  Jdk中相关原子操作类的使用
+             ````
+          更新基本类型类：AtomicBoolean，AtomicInteger，AtomicLong，AtomicReference
+          更新数组类：AtomicIntegerArray，AtomicLongArray，AtomicReferenceArray
+          更新引用类型：AtomicReference，AtomicMarkableReference，AtomicStampedReference
+          原子更新字段类： AtomicReferenceFieldUpdater，AtomicIntegerFieldUpdater，AtomicLongFieldUpdater
+            ````
+       - LongAdder 
+            ````
+            java8 新增的原子类 
+            试使用分段CAS以及自动分段迁移的方式来大幅度提升多线程高并发执行CAS操作的性能！
+            解决了Atomic CAS失败不断自旋 消耗性能的问题  
+            并发的Adder类和AtomicInteger相比有60~100%的性能提升（https://my.oschina.net/u/1185936/blog/678466） 能用Adder就用Adder吧
+            
+            
+     + 可重入锁（递归锁）
+        ````
+         这里讲的是广义上的可重入锁，而不是单指JAVA 下的 ReentrantLock。可重入锁，也叫
+         做递归锁，指的是同一线程 外层函数获得锁之后 ，内层递归函数仍然有获取该锁的代码，但不受
+         影响。在 JAVA 环境下 ReentrantLock 和 synchronized 都是 可重入锁   
+        ````
+     + 公平锁与非公平锁
+        - 公 平锁（ Fair ）
+          加锁前检查是否有排队等待的线程，优先排队等待的线程，先来先得
+        - 非公平锁（ Nonfair ）
+          加锁时不考虑排队等待问题，直接尝试获取锁，获取不到自动到队尾等待
+          1.  非公平锁性能比公平锁高 5~10 倍，因为公平锁需要在多核的情况下维护一个队列
+          2.  Java 中的 synchronized 是非公平锁，ReentrantLock 默认的 lock()方法采用的是非公平锁
+     
+     + ReadWriteLock  读写锁
+        ````
+        为了提高性能，Java 提供了读写锁，在读的地方使用读锁，在写的地方使用写锁，灵活控制，如
+        果没有写锁的情况下，读是无阻塞的,在一定程度上提高了程序的执行效率。读写锁分为读锁和写
+        锁，多个读锁不互斥，读锁与写锁互斥，这是由 jvm 自己控制的，你只要上好相应的锁即可
+        ````
+        - 读锁
+          > 如果你的代码只读数据，可以很多人同时读，但不能同时写，那就上读锁
+        - 写锁
+          > 如果你的代码修改数据，只能有一个人在写，且不能同时读取，那就上写锁。总之，读的时候上
+            读锁，写的时候上写锁！
+            
+            Java 中 读 写 锁 有 个 接 口 java.util.concurrent.locks.ReadWriteLock ， 也 有 具 体 的 实 现ReentrantReadWriteLock
+     + 共享锁和独占锁
+        > java 并发包提供的加锁模式分为独占锁和共享锁
+        
+        - 独占锁
+          >独占锁模式下，每次只能有一个线程能持有锁，ReentrantLock 就是以独占方式实现的互斥锁。
+          独占锁是一种悲观保守的加锁策略，它避免了读/读冲突，如果某个只读线程获取锁，则其他读线
+          程都只能等待，这种情况下就限制了不必要的并发性，因为读操作并不会影响数据的一致性。
+        - 共享锁
+          >共享锁则允许多个线程同时获取锁，并发访问 共享资源，如：ReadWriteLock。共享锁则是一种
+          乐观锁，它放宽了加锁策略，允许多个执行读操作的线程同时访问共享资源。
+          1.  AQS 的内部类 Node 定义了两个常量 SHARED 和 EXCLUSIVE，他们分别标识 AQS 队列中等
+          待线程的锁获取模式。
+          2.  java 的并发包中提供了 ReadWriteLock，读-写锁。它允许一个资源可以被多个读操作访问，
+          或者被一个 写操作访问，但两者不能同时进行。
+     +  重量级锁 （ Mutex Lock ） ）
+        > Synchronized 是通过对象内部的一个叫做监视器锁（monitor）来实现的。但是监视器锁本质又
+          是依赖于底层的操作系统的 Mutex Lock 来实现的。而操作系统实现线程之间的切换这就需要从用
+          户态转换到核心态，这个成本非常高，状态之间的转换需要相对比较长的时间，这就是为什么
+          Synchronized 效率低的原因。因此，这种依赖于操作系统 Mutex Lock 所实现的锁我们称之为
+          “重量级锁”。JDK 中对 Synchronized 做的种种优化，其核心都是为了减少这种重量级锁的使用。
+          JDK1.6 以后，为了减少获得锁和释放锁所带来的性能消耗，提高性能，引入了“轻量级锁”和
+          “偏向锁”
+     + 轻量级锁
+        > 锁的状态总共有四种：无锁状态、偏向锁、轻量级锁和重量级锁。
+        - 锁升级
+             > 随着锁的竞争，锁可以从偏向锁升级到轻量级锁，再升级的重量级锁（但是锁的升级是单向的，
+              也就是说只能从低到高升级，不会出现锁的降级）。
+              “轻量级”是相对于使用操作系统互斥量来实现的传统锁而言的。但是，首先需要强调一点的是，
+              轻量级锁并不是用来代替重量级锁的，它的本意是在没有多线程竞争的前提下，减少传统的重量
+              级锁使用产生的性能消耗。在解释轻量级锁的执行过程之前，先明白一点，轻量级锁所适应的场
+              景是线程交替执行同步块的情况，如果存在同一时间访问同一锁的情况，就会导致轻量级锁膨胀
+              为重量级锁。
+     + 偏向锁
+        > Hotspot 的作者经过以往的研究发现大多数情况下锁不仅不存在多线程竞争，而且总是由同一线
+          程多次获得。偏向锁的目的是在某个线程获得锁之后，消除这个线程锁重入（CAS）的开销，看起
+          来让这个线程得到了偏护。引入偏向锁是为了在无多线程竞争的情况下尽量减少不必要的轻量级
+          锁执行路径，因为轻量级锁的获取及释放依赖多次 CAS 原子指令，而偏向锁只需要在置换
+          ThreadID 的时候依赖一次 CAS 原子指令（由于一旦出现多线程竞争的情况就必须撤销偏向锁，所
+          以偏向锁的撤销操作的性能损耗必须小于节省下来的 CAS 原子指令的性能消耗）。上面说过，轻
+          量级锁是为了在线程交替执行同步块时提高性能，而偏向锁则是在只有一个线程执行同步块时进
+          一步提高性能
+     + 分段锁
+        > 分段锁也并非一种实际的锁，而是一种思想 ConcurrentHashMap 是学习分段锁的最好实践
+     + 锁 优化
+        - 减少锁持有时间
+          > 只用在有线程安全要求的程序上加锁
+        - 减小锁粒度
+          >  将大对象（这个对象可能会被很多线程访问），拆成小对象，大大增加并行度，降低锁竞争。
+          降低了锁的竞争，偏向锁，轻量级锁成功率才会提高。最最典型的减小锁粒度的案例就是
+          ConcurrentHashMap。
+        - 锁分离
+          > 最常见的锁分离就是读写锁 ReadWriteLock，根据功能进行分离成读锁和写锁，这样读读不互
+          斥，读写互斥，写写互斥，即保证了线程安全，又提高了性能，具体也请查看[高并发 Java 五]
+          JDK 并发包 1。读写分离思想可以延伸，只要操作互不影响，锁就可以分离。比如
+          LinkedBlockingQueue 从头部取出，从尾部放数据
+        - 锁粗化
+          > 通常情况下，为了保证多线程间的有效并发，会要求每个线程持有锁的时间尽量短，即在使用完
+          公共资源后，应该立即释放锁。但是，凡事都有一个度，如果对同一个锁不停的进行请求、同步
+          和释放，其本身也会消耗系统宝贵的资源，反而不利于性能的优化 。
+        - 锁消除
+          > 锁消除是在编译器级别的事情。在即时编译器时，如果发现不可能被共享的对象，则可以消除这
+          些对象的锁操作，多数是因为程序员编码不规范引起。
+          
+          参考： https://www.jianshu.com/p/39628e1180a9
