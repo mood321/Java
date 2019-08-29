@@ -1,4 +1,5 @@
 ### Java多线程学习笔记-重写版本
+
 #### 线程的基本概念
    + CPU核心数和线程数的关系
      ````
@@ -293,13 +294,28 @@
             ReentrantLock 在构造函数中提供了是否公平锁的初始化方式来定义公平锁。
            ````
         +  ReentrantLock  与 synchronized
-            1.  ReentrantLock 通过方法 lock()与 unlock()来进行加锁与解锁操作，与 synchronized 会
-            被 JVM 自动解锁机制不同，ReentrantLock 加锁后需要手动进行解锁。为了避免程序出
-            现异常而无法正常解锁的情况，使用 ReentrantLock 必须在 finally 控制块中进行解锁操
-            作。
-            2.  ReentrantLock 相比 synchronized 的优势是可中断、公平锁、多个锁。这种情况下需要
-            使用 ReentrantLock。
-            
+            - 两者的共同点：
+                1.  都是用来协调多线程对共享对象、变量的访问
+                2.  都是可重入锁，同一线程可以多次获得同一个锁
+                3.  都保证了可见性和互斥性
+            - 两者的不同点：
+                1.  ReentrantLock 显示的获得、释放锁，synchronized 隐式获得释放锁
+                2.  ReentrantLock 可响应中断、可轮回，synchronized 是不可以响应中断的，为处理锁的
+                不可用性提供了更高的灵活性
+                3.  ReentrantLock 是 API 级别的，synchronized 是 JVM 级别的
+                4.  ReentrantLock 可以实现公平锁
+                5.  ReentrantLock 通过 Condition 可以绑定多个条件
+                6.  底层实现不一样， synchronized 是同步阻塞，使用的是悲观并发策略，lock 是同步非阻
+                塞，采用的是乐观并发策略
+                7.  Lock 是一个接口，而 synchronized 是 Java 中的关键字，synchronized 是内置的语言
+                实现。
+                8.  synchronized 在发生异常时，会自动释放线程占有的锁，因此不会导致死锁现象发生；
+                而 Lock 在发生异常时，如果没有主动通过 unLock()去释放锁，则很可能造成死锁现象，
+                因此使用 Lock 时需要在 finally 块中释放锁。
+                9.  Lock 可以让等待锁的线程响应中断，而 synchronized 却不行，使用 synchronized 时，
+                等待的线程会一直等待下去，不能够响应中断。
+                10. 通过 Lock 可以知道有没有成功获取锁，而 synchronized 却无法办到。
+                11. Lock 可以提高多个线程进行读操作的效率，既就是实现读写锁等
             + ReentrantLock 实现
                 ````
                     private Lock lock = new ReentrantLock();
@@ -337,6 +353,8 @@
               2.  lock 能获得锁就返回 true，不能的话一直等待获得锁
               3.  lock 和 lockInterruptibly，如果两个线程分别执行这两个方法，但此时中断这两个线程，
               lock 不会抛出异常，而 lockInterruptibly 会抛出异常。
+                +
+     
      - Semaphore 信号量
         ````
         Semaphore 是一种基于计数的信号量。它可以设定一个阈值，基于此，多个线程竞争获取许可信

@@ -48,4 +48,7 @@
         - java多线程线程池和JUC学习笔记
               - [java多线程线程池和JUC学习笔记](https://github.com/mood321/JavaDemo/blob/master/src/main/resources/note/Java多线程学习笔记-线程池.md)
                        
+        - Java多线程学习笔记-JMM和AQS
+              - [Java多线程学习笔记-JMM和AQS](https://github.com/mood321/JavaDemo/blob/master/src/main/resources/note/Java多线程学习笔记--JMM和AQS.md)
+                       
    
