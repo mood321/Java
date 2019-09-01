@@ -50,5 +50,10 @@
                        
         - Java多线程学习笔记-JMM和AQS
               - [Java多线程学习笔记-JMM和AQS](https://github.com/mood321/JavaDemo/blob/master/src/main/resources/note/Java多线程学习笔记--JMM和AQS.md)
+        - Java集合学习
+              - [LinkesList学习](https://github.com/mood321/JavaDemo/blob/master/src/main/resources/note/conllection/LinkedList源码学习.md)
+                       
+        - Java集合学习
+              - [ArrayList学习](https://github.com/mood321/JavaDemo/blob/master/src/main/resources/note/conllection/ArrayList学习.md)
                        
    
