@@ -63,5 +63,9 @@
               - [HashMap源码分析](https://github.com/mood321/JavaDemo/blob/master/src/main/resources/note/conllection/HashMap源码分析.md)
         - Java集合学习
               - [LinkedHashMap](https://github.com/mood321/JavaDemo/blob/master/src/main/resources/note/conllection/LinkedHashMap.md)
+        - Java集合学习
+              - [WeakHashMap](https://github.com/mood321/JavaDemo/blob/master/src/main/resources/note/conllection/WeakHashMap.md)
+        - Java集合学习
+              - [TreeMap源码分析](https://github.com/mood321/JavaDemo/blob/master/src/main/resources/note/conllection/TreeMap源码分析.md)
                        
    
