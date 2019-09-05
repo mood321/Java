@@ -50,32 +50,40 @@
                        
         - Java多线程学习笔记-JMM和AQS
               - [Java多线程学习笔记-JMM和AQS](https://github.com/mood321/JavaDemo/blob/master/src/main/resources/note/Java多线程学习笔记--JMM和AQS.md)
-        - Java集合学习
+        - Java集合学习-list
               - [LinkesList学习](https://github.com/mood321/JavaDemo/blob/master/src/main/resources/note/conllection/LinkedList源码学习.md)
                        
-        - Java集合学习
+        - Java集合学习-list
               - [ArrayList学习](https://github.com/mood321/JavaDemo/blob/master/src/main/resources/note/conllection/ArrayList学习.md)
                        
-        - Java集合学习
+        - Java集合学习-list
               - [CopyOnWriteArrayList](https://github.com/mood321/JavaDemo/blob/master/src/main/resources/note/conllection/CopyOnWriteArrayList.md)
                        
-        - Java集合学习
+        - Java集合学习-map
               - [HashMap源码分析](https://github.com/mood321/JavaDemo/blob/master/src/main/resources/note/conllection/HashMap源码分析.md)
-        - Java集合学习
+        - Java集合学习-map
               - [LinkedHashMap](https://github.com/mood321/JavaDemo/blob/master/src/main/resources/note/conllection/LinkedHashMap.md)
-        - Java集合学习
+        - Java集合学习-map
               - [WeakHashMap](https://github.com/mood321/JavaDemo/blob/master/src/main/resources/note/conllection/WeakHashMap.md)
         - Java集合学习
               - [TreeMap源码分析](https://github.com/mood321/JavaDemo/blob/master/src/main/resources/note/conllection/TreeMap源码分析.md)
-        - Java集合学习
+        - Java集合学习-set
               - [HashSet](https://github.com/mood321/JavaDemo/blob/master/src/main/resources/note/conllection/HashSet.md)
-        - Java集合学习
+        - Java集合学习-set
               - [LinkedHashSet](https://github.com/mood321/JavaDemo/blob/master/src/main/resources/note/conllection/LinkedHashSet.md)
-        - Java集合学习
+        - Java集合学习-set
               - [TreeSet](https://github.com/mood321/JavaDemo/blob/master/src/main/resources/note/conllection/TreeSet.md)
-        - Java集合学习
+        - Java集合学习-set
               - [CopyOnWriteArraySet](https://github.com/mood321/JavaDemo/blob/master/src/main/resources/note/conllection/CopyOnWriteArraySet.md)
-        - Java集合学习
+        - Java集合学习-set
               - [ConcurrentSkipListSet](https://github.com/mood321/JavaDemo/blob/master/src/main/resources/note/conllection/ConcurrentSkipListSet.md)
+        - Java集合学习-队列
+              - [ArrayBlockingQueue](https://github.com/mood321/JavaDemo/blob/master/src/main/resources/note/conllection/queue/ArrayBlockingQueue.md)
+        - Java集合学习-队列
+              - [LinkedBlockingQueue](https://github.com/mood321/JavaDemo/blob/master/src/main/resources/note/conllection/queue/LinkedBlockingQueue.md)
+        - Java集合学习-队列
+              - [PriorityQueue](https://github.com/mood321/JavaDemo/blob/master/src/main/resources/note/conllection/queue/PriorityQueue.md)
+        - Java集合学习-队列
+              - [SynchronousQueue](https://github.com/mood321/JavaDemo/blob/master/src/main/resources/note/conllection/queue/SynchronousQueue.md)
                        
    
