@@ -85,5 +85,15 @@
               - [PriorityQueue](https://github.com/mood321/JavaDemo/blob/master/src/main/resources/note/conllection/queue/PriorityQueue.md)
         - Java集合学习-队列
               - [SynchronousQueue](https://github.com/mood321/JavaDemo/blob/master/src/main/resources/note/conllection/queue/SynchronousQueue.md)
+        - Java集合学习-队列
+              - [PriorityBlockingQueue](https://github.com/mood321/JavaDemo/blob/master/src/main/resources/note/conllection/queue/PriorityBlockingQueue.md)
+        - Java集合学习-队列
+              - [LinkedTransferQueue](https://github.com/mood321/JavaDemo/blob/master/src/main/resources/note/conllection/queue/LinkedTransferQueue.md)
+        - Java集合学习-队列
+              - [ConcurrentLinkedQueue](https://github.com/mood321/JavaDemo/blob/master/src/main/resources/note/conllection/queue/ConcurrentLinkedQueue.md)
+        - Java集合学习-队列
+              - [DelayQueue](https://github.com/mood321/JavaDemo/blob/master/src/main/resources/note/conllection/queue/DelayQueue.md)
+        - Java集合学习-队列
+              - [ArrayDeque](https://github.com/mood321/JavaDemo/blob/master/src/main/resources/note/conllection/queue/ArrayDeque.md)
                        
    
