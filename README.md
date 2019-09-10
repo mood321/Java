@@ -95,5 +95,7 @@
               - [DelayQueue](https://github.com/mood321/JavaDemo/blob/master/src/main/resources/note/conllection/queue/DelayQueue.md)
         - Java集合学习-队列
               - [ArrayDeque](https://github.com/mood321/JavaDemo/blob/master/src/main/resources/note/conllection/queue/ArrayDeque.md)
+        - Java集合学习-map（跳表）
+              - [ConcurrentSkipListMap](https://github.com/mood321/JavaDemo/blob/master/src/main/resources/note/conllection/ConcurrentSkipListMap.md)
                        
    
