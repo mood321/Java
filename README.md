@@ -97,5 +97,7 @@
               - [ArrayDeque](https://github.com/mood321/JavaDemo/blob/master/src/main/resources/note/conllection/queue/ArrayDeque.md)
         - Java集合学习-map（跳表）
               - [ConcurrentSkipListMap](https://github.com/mood321/JavaDemo/blob/master/src/main/resources/note/conllection/ConcurrentSkipListMap.md)
+        - Java集合学习-map
+              - [ConcurrentHashMap](https://github.com/mood321/JavaDemo/blob/master/src/main/resources/note/conllection/ConcurrentHashMap.md)
                        
    
