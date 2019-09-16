@@ -99,5 +99,7 @@
               - [ConcurrentSkipListMap](https://github.com/mood321/JavaDemo/blob/master/src/main/resources/note/conllection/ConcurrentSkipListMap.md)
         - Java集合学习-map
               - [ConcurrentHashMap](https://github.com/mood321/JavaDemo/blob/master/src/main/resources/note/conllection/ConcurrentHashMap.md)
+        - java集合学习笔记总结
+              - [java集合学习笔记总结](https://github.com/mood321/JavaDemo/blob/master/src/main/resources/note/conllection/java集合学习笔记总结.md)
                        
    

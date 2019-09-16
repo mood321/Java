@@ -191,30 +191,77 @@ private boolean addIfAbsent(E e, Object[] snapshot) {
 <h3>get方法</h3>
 <blockquote>
 <p>无锁获取元素，性能较高；但是array的元素的变化还没有刷新到主内存上（set方法，通过锁来保证元素的可见性）、或者复制数组的过程中，还没有更新数组引用（add方法）；即锁还没有释放，这时另外一个线程去读，所以会出现脏读。</p>
-<br>
-<div class="image-package">
-<div class="image-container" style="max-width: 700px; max-height: 165px;">
-<div class="image-container-fill" style="padding-bottom: 19.900000000000002%;"></div>
-<div class="image-view" data-width="829" data-height="165"><img data-original-src="//upload-images.jianshu.io/upload_images/5064562-284a00e6cc0ee3df.png" data-original-width="829" data-original-height="165" data-original-format="image/png" data-original-filesize="15397"></div>
-</div>
-<div class="image-caption"></div>
-</div>
-<br>
+<p>获取指定索引的元素，支持随机访问，时间复杂度为O(1)。</p>
+<pre><code class="java">public E get(int index) {
+    // 获取元素不需要加锁
+    // 直接返回index位置的元素
+    // 这里是没有做越界检查的, 因为数组本身会做越界检查
+    return get(getArray(), index);
+}
+final Object[] getArray() {
+    return array;
+}
+private E get(Object[] a, int index) {
+    return (E) a[index];
+}
+</code></pre>
+<p>（1）获取元素数组；</p>
+<p>（2）返回数组指定索引位置的元素；</p>
 <p>注意：volatile数组的可见性问题<br>
 volatile的数组只针对数组的引用具有volatile的语义，而不是它的元素</p>
 
 </blockquote>
+<h3><span id="removeint_index">remove(int index)方法</span></h3>
+<p>删除指定索引位置的元素。</p>
+<pre><code class="java">public E remove(int index) {
+    final ReentrantLock lock = this.lock;
+    // 加锁
+    lock.lock();
+    try {
+        // 获取旧数组
+        Object[] elements = getArray();
+        int len = elements.length;
+        E oldValue = get(elements, index);
+        int numMoved = len - index - 1;
+        if (numMoved == 0)
+            // 如果移除的是最后一位
+            // 那么直接拷贝一份n-1的新数组, 最后一位就自动删除了
+            setArray(Arrays.copyOf(elements, len - 1));
+        else {
+            // 如果移除的不是最后一位
+            // 那么新建一个n-1的新数组
+            Object[] newElements = new Object[len - 1];
+            // 将前index的元素拷贝到新数组中
+            System.arraycopy(elements, 0, newElements, 0, index);
+            // 将index后面(不包含)的元素往前挪一位
+            // 这样正好把index位置覆盖掉了, 相当于删除了
+            System.arraycopy(elements, index + 1, newElements, index,
+                             numMoved);
+            setArray(newElements);
+        }
+        return oldValue;
+    } finally {
+        // 释放锁
+        lock.unlock();
+    }
+}
+</code></pre>
+<p>（1）加锁；</p>
+<p>（2）获取指定索引位置元素的旧值；</p>
+<p>（3）如果移除的是最后一位元素，则把原数组的前len-1个元素拷贝到新数组中，并把新数组赋值给当前对象的数组属性；</p>
+<p>（4）如果移除的不是最后一位元素，则新建一个len-1长度的数组，并把原数组除了指定索引位置的元素全部拷贝到新数组中，并把新数组赋值给当前对象的数组属性；</p>
+<p>（5）解锁并返回旧值；</p>
+
 <h3>size和isEmpty方法</h3>
 <blockquote>
 <p>同样会出现脏读，比如add方法在复制数组的过程中，此时调用size、isEmpty方法</p>
-<br>
-<div class="image-package">
-<div class="image-container" style="max-width: 700px; max-height: 401px;">
-<div class="image-container-fill" style="padding-bottom: 48.49%;"></div>
-<div class="image-view" data-width="827" data-height="401"><img data-original-src="//upload-images.jianshu.io/upload_images/5064562-ed0fe3b9101b0e95.png" data-original-width="827" data-original-height="401" data-original-format="image/png" data-original-filesize="30381"></div>
-</div>
-<div class="image-caption"></div>
-</div>
+<p>返回数组的长度。</p>
+<pre><code class="java">public int size() {
+    // 获取元素个数不需要加锁
+    // 直接返回数组的长度
+    return getArray().length;
+}
+</code></pre>
 </blockquote>
 <h3>iterator迭代器方法</h3>
 <blockquote>
@@ -223,7 +270,7 @@ volatile的数组只针对数组的引用具有volatile的语义，而不是它�
 <div class="image-package">
 <div class="image-container" style="max-width: 700px; max-height: 445px;">
 <div class="image-container-fill" style="padding-bottom: 58.17%;"></div>
-<div class="image-view" data-width="765" data-height="445"><img data-original-src="//upload-images.jianshu.io/upload_images/5064562-ecf88d0bd47f7dd8.png" data-original-width="765" data-original-height="445" data-original-format="image/png" data-original-filesize="47507"></div>
+<div class="image-view" data-width="765" data-height="445"><img data-original-src="upload-images.jianshu.io/upload_images/5064562-ecf88d0bd47f7dd8.png" data-original-width="765" data-original-height="445" data-original-format="image/png" data-original-filesize="47507"></div>
 </div>
 <div class="image-caption"></div>
 </div>
@@ -232,7 +279,7 @@ COWIterator不支持的方法<br>
 <div class="image-package">
 <div class="image-container" style="max-width: 661px; max-height: 479px;">
 <div class="image-container-fill" style="padding-bottom: 72.47%;"></div>
-<div class="image-view" data-width="661" data-height="479"><img data-original-src="//upload-images.jianshu.io/upload_images/5064562-1b400a7468677c5c.png" data-original-width="661" data-original-height="479" data-original-format="image/png" data-original-filesize="47985"></div>
+<div class="image-view" data-width="661" data-height="479"><img data-original-src="upload-images.jianshu.io/upload_images/5064562-1b400a7468677c5c.png" data-original-width="661" data-original-height="479" data-original-format="image/png" data-original-filesize="47985"></div>
 </div>
 <div class="image-caption"></div>
 </div>
@@ -245,24 +292,16 @@ COWIterator不支持的方法<br>
 <ol start="2">
 <li>由于是对快照进行操作所以<strong>迭代器方法仅支持读操作，不支持和写操作相关的任何操作（如 remove，set，add）</strong>，调用将抛出NoSuchElementException异常。</li>
 </ol>
-<h3>其他方法列表</h3>
-<blockquote>
-<div class="image-package">
-<div class="image-container" style="max-width: 700px; max-height: 580px;">
-<div class="image-container-fill" style="padding-bottom: 51.92%;"></div>
-<div class="image-view" data-width="1117" data-height="580"><img data-original-src="//upload-images.jianshu.io/upload_images/5064562-b2d16629db43c924.png" data-original-width="1117" data-original-height="580" data-original-format="image/png" data-original-filesize="125373"></div>
-</div>
-<div class="image-caption"></div>
-</div>
-<br>
-<div class="image-package">
-<div class="image-container" style="max-width: 700px; max-height: 557px;">
-<div class="image-container-fill" style="padding-bottom: 47.49%;"></div>
-<div class="image-view" data-width="1173" data-height="557"><img data-original-src="//upload-images.jianshu.io/upload_images/5064562-47b68208bc3f319a.png" data-original-width="1173" data-original-height="557" data-original-format="image/png" data-original-filesize="122173"></div>
-</div>
-<div class="image-caption"></div>
-</div>
-</blockquote>
+
 <h3>总结</h3>
+<p>（1）CopyOnWriteArrayList使用ReentrantLock重入锁加锁，保证线程安全；</p>
+<p>（2）CopyOnWriteArrayList的写操作都要先拷贝一份新数组，在新数组中做修改，修改完了再用新数组替换老数组，所以空间复杂度是O(n)，性能比较低下；</p>
+<p>（3）CopyOnWriteArrayList的读操作支持随机访问，时间复杂度为O(1)；</p>
+<p>（4）CopyOnWriteArrayList采用读写分离的思想，读操作不加锁，写操作加锁，且写操作占用较大内存空间，所以适用于读多写少的场合；</p>
+<p>（5）CopyOnWriteArrayList只保证最终一致性，不保证实时一致性；</p>
+<h2><span id="i-6">彩蛋</span></h2>
+<p><em>为什么CopyOnWriteArrayList没有size属性？</em></p>
+<p>因为每次修改都是拷贝一份正好可以存储目标个数元素的数组，所以不需要size属性了，数组的长度就是集合的大小，而不像ArrayList数组的长度实际是要大于集合的大小的。</p>
+<p>比如，add(E e)操作，先拷贝一份n+1个元素的数组，再把新元素放到新数组的最后一位，这时新数组的长度为len+1了，也就是集合的size了。</p>
 <p>CopyOnWriteArrayList 基于ReentranLock保证了增加元素和删除元素动作的互斥。<strong>每一次写操作（remove，add等相关的）都将会创建数组复制元素，这将造成频繁写极大的性能消耗</strong>。<strong>在读操作上没有加锁，保证了读的性能，但是却会出现脏读的问题（get、iterator、size、isEmpty）</strong>。综上CopyOnWriteArrayList <strong>适合读多写少</strong>，<strong>对实时性不敏感</strong>的应用场景。<br>
 允许null元素</p>
