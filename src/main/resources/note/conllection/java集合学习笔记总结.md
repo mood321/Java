@@ -148,6 +148,13 @@
 <p>跳表是一个随机化的数据结构，实质就是一种可以进行<strong>二分</strong>查找的<strong>有序链表</strong>。</p>
 <p>跳表在原有的有序链表上面增加了多级索引，通过索引来实现快速查找。</p>
 <p>跳表不仅能提高搜索性能，同时也可以提高插入和删除操作的性能。</p>
+<p >（1）跳表是可以实现二分查找的有序链表；</p>
+<p >（2）每个元素插入时随机生成它的level；</p>
+<p >（3）最低层包含所有的元素；</p>
+<p >（4）如果一个元素出现在level(x)，那么它肯定出现在x以下的level中；</p>
+<p >（5）每个索引节点包含两个指针，一个向下，一个向右；</p>
+<p >（6）跳表查询、插入、删除的时间复杂度为O(log&nbsp;n)，与平衡二叉树接近；</p>
+
 <p>引用级别</p>
 <p>JDK1.2版本开始，把对象的引用分为四种级别，从而使程序能更加灵活的控制对象的生命周期。这四种级别由高到低依次为：强引用、软引用、弱引用和虚引用</p>
 <ul>1．强引用</ul>
@@ -237,6 +244,33 @@
 <p>（5）TreeMap的遍历不是采用传统的递归式遍历；</p>
 <p>（6）TreeMap可以按范围查找元素，查找最近的元素；</p>
 
+ <h4>  ConcurrentHashMap 要点</h4>
+ <p>（1）ConcurrentHashMap是HashMap的线程安全版本；</p>
+ <p>（2）ConcurrentHashMap采用（数组 + 链表 + 红黑树）的结构存储元素；</p>
+ <p>（3）ConcurrentHashMap相比于同样线程安全的HashTable，效率要高很多；</p>
+ <p>（4）ConcurrentHashMap采用的锁有 synchronized，CAS，自旋锁，分段锁，volatile等；</p>
+ <p>（5）ConcurrentHashMap中没有threshold和loadFactor这两个字段，而是采用sizeCtl来控制；</p>
+ <p>（6）sizeCtl = -1，表示正在进行初始化；</p>
+ <p>（7）sizeCtl = 0，默认值，表示后续在真正初始化的时候使用默认容量；</p>
+ <p>（8）sizeCtl > 0，在初始化之前存储的是传入的容量，在初始化或扩容后存储的是下一次的扩容门槛；</p>
+ <p>（9）sizeCtl = (resizeStamp &lt;&lt; 16) + (1 + nThreads)，表示正在进行扩容，高位存储扩容邮戳，低位存储扩容线程数加1；</p>
+ <p>（10）更新操作时如果正在进行扩容，当前线程协助扩容；</p>
+ <p>（11）更新操作会采用synchronized锁住当前桶的第一个元素，这是分段锁的思想；</p>
+ <p>（12）整个扩容过程都是通过CAS控制sizeCtl这个字段来进行的，这很关键；</p>
+ <p>（13）迁移完元素的桶会放置一个ForwardingNode节点，以标识该桶迁移完毕；</p>
+ <p>（14）元素个数的存储也是采用的分段思想，类似于LongAdder的实现；</p>
+ <p>（15）元素个数的更新会把不同的线程hash到不同的段上，减少资源争用；</p>
+ <p>（16）元素个数的更新如果还是出现多个线程同时更新一个段，则会扩容段（CounterCell）；</p>
+ <p>（17）获取元素个数是把所有的段（包括baseCount和CounterCell）相加起来得到的；</p>
+ <p>（18）查询操作是不会加锁的，所以ConcurrentHashMap不是强一致性的；</p>
+ <p>（19）ConcurrentHashMap中不能存储key或value为null的元素；</p>
+ <h5><span id="i-5">ConcurrentHashMap 值得学习的技术</span></h5>
+ <p>ConcurrentHashMap中有哪些值得学习的技术呢？</p>
+ <p>（1）CAS + 自旋，乐观锁的思想，减少线程上下文切换的时间；</p>
+ <p>（2）分段锁的思想，减少同一把锁争用带来的低效问题；</p>
+ <p>（3）CounterCell，分段存储元素个数，减少多线程同时更新一个字段带来的低效；</p>
+ <p>（4）@sun.misc.Contended（CounterCell上的注解），避免伪共享；（p.s.伪共享我们后面也会讲的^^）</p>
+ <p>（5）多线程协同进行扩容；</p>
 <h2><span id="Set">Set</span></h2>
 <p>java里面的Set对应于数学概念上的集合，里面的元素是不可重复的，通常使用Map或者List来实现。</p>
 <p><img src="https://gitee.com/alan-tang-tt/yuan/raw/master/死磕%20java集合系列/resource/Set.png" alt="qrcode" /></p>
