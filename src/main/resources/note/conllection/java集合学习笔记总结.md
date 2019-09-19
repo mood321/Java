@@ -134,9 +134,9 @@
 <p><a href="http://cmsblogs.com/?p=4773">【死磕 Java 集合】— ConcurrentSkipListMap源码分析</a></p>
 <h3>list 基于上述问题总结</h3>
 <h4>基础概念<h4>
-<p>散列表</p>
+<h4>散列表</h4>
 <p>采用key/value存储结构，每个key对应唯一的value，查询和修改的速度都很快，能达到O(1)的平均时间复杂度</p>
-<p>红黑树</p>
+<h4>红黑树</h4>
 <p>（1）节点是红色或黑色。</p>
 <p>（2）根节点是黑色。</p>
 <p>（3）每个叶节点（NIL节点，空节点）是黑色的。</p>
@@ -144,7 +144,7 @@
 <p>（5）从任一节点到其每个叶子的所有路径都包含相同数目的黑色节点。</p>
 <p>红黑树的时间复杂度为O(log n)，与树的高度成正比。</p>
 <p>红黑树每次的插入、删除操作都需要做平衡，平衡时有可能会改变根节点的位置，颜色转换，左旋，右旋等。</p>
-<p>跳表</p>
+<h4>跳表</h4>
 <p>跳表是一个随机化的数据结构，实质就是一种可以进行<strong>二分</strong>查找的<strong>有序链表</strong>。</p>
 <p>跳表在原有的有序链表上面增加了多级索引，通过索引来实现快速查找。</p>
 <p>跳表不仅能提高搜索性能，同时也可以提高插入和删除操作的性能。</p>
@@ -155,7 +155,7 @@
 <p >（5）每个索引节点包含两个指针，一个向下，一个向右；</p>
 <p >（6）跳表查询、插入、删除的时间复杂度为O(log&nbsp;n)，与平衡二叉树接近；</p>
 
-<p>引用级别</p>
+<h4>引用级别</h4>
 <p>JDK1.2版本开始，把对象的引用分为四种级别，从而使程序能更加灵活的控制对象的生命周期。这四种级别由高到低依次为：强引用、软引用、弱引用和虚引用</p>
 <ul>1．强引用</ul>
     
@@ -190,17 +190,17 @@
     虚引用： 
     虚拟机的内存不够使用，开始报警，这时候垃圾回收机制开始执行System.gc(); String s = “abc”;如果没有对象回收了， 就回收没虚引用的对象
 
-<p>伪共享<a href="https://www.jianshu.com/p/7758bb277985">(https://www.jianshu.com/p/7758bb277985)</a></p>
+<h4>伪共享<a href="https://www.jianshu.com/p/7758bb277985">(https://www.jianshu.com/p/7758bb277985)</a></h4>
 
         定义: 当多线程修改互相独立的变量时，如果这些变量共享同一个缓存行，就会无意中影响彼此的性能，这就是伪共享
         java 解决方案：JDK1.8之前解决方式-padding方式  填充缓存行  一个缓存行 64字节  即 8个long的长度  使变量不分开
            JDK1.8之后解决方式- Contended注解方式  在JDK1.8中，新增了一种注解@sun.misc.Contended，来使各个变量在Cache line中分隔开。
                     注意，jvm需要添加参数-XX:-RestrictContended才能开启此功能  
         ps: 在concurrentHashmap 中各个桶的长度 CounterCell 就使用了这个
-<p>LRU算法 缓存淘汰策略 <a href="https://www.cnblogs.com/Dhouse/p/8615481.html">https://www.cnblogs.com/Dhouse/p/8615481.html</a></p>
+<h4>LRU算法 缓存淘汰策略 <a href="https://www.cnblogs.com/Dhouse/p/8615481.html">https://www.cnblogs.com/Dhouse/p/8615481.html</a></h4>
 
     LRU（Least recently used，最近最少使用）算法根据数据的历史访问记录来进行淘汰数据，其核心思想是“如果数据最近被访问过，那么将来被访问的几率也更高”。
-<p> 二叉树的遍历</p>
+<h4> 二叉树的遍历</h4>
 
     我们知道二叉查找树的遍历有前序遍历、中序遍历、后序遍历。
     （1）前序遍历，先遍历我，再遍历我的左子节点，最后遍历我的右子节点；
@@ -271,6 +271,7 @@
  <p>（3）CounterCell，分段存储元素个数，减少多线程同时更新一个字段带来的低效；</p>
  <p>（4）@sun.misc.Contended（CounterCell上的注解），避免伪共享；（p.s.伪共享我们后面也会讲的^^）</p>
  <p>（5）多线程协同进行扩容；</p>
+ 
 <h2><span id="Set">Set</span></h2>
 <p>java里面的Set对应于数学概念上的集合，里面的元素是不可重复的，通常使用Map或者List来实现。</p>
 <p><img src="https://gitee.com/alan-tang-tt/yuan/raw/master/死磕%20java集合系列/resource/Set.png" alt="qrcode" /></p>
@@ -300,6 +301,98 @@
 <p><a href="http://cmsblogs.com/?p=4749">【死磕 Java 集合】— TreeSet源码分析</a></p>
 <p><a href="http://cmsblogs.com/?p=4751">【死磕 Java 集合】— CopyOnWriteArraySet源码分析</a></p>
 <p><a href="http://cmsblogs.com/?p=4753">【死磕 Java 集合】— ConcurrentSkipListSet源码分析</a></p>
+ 
+ <h4>  HashSet 要点</h4>
+ <p>（1）HashSet内部使用HashMap的key存储元素，以此来保证元素不重复；</p>
+ <p>（2）HashSet是无序的，因为HashMap的key是无序的；</p>
+ <p>（3）HashSet中允许有一个null元素，因为HashMap允许key为null；</p>
+ <p>（4）HashSet是非线程安全的；</p>
+ <p>（5）HashSet是没有get()方法的；</p>
+  
+ <h4>  LinkedHashSet 要点</h4>
+<p>（1）LinkedHashSet的底层使用LinkedHashMap存储元素。</p>
+<p>（2）LinkedHashSet是有序的，它是按照插入的顺序排序的。</p>
+
+ <h4>  TreeSet 要点</h4>
+ <p>（1）TreeSet底层使用NavigableMap存储元素；</p>
+ <p>（2）TreeSet是有序的；</p>
+ <p>（3）TreeSet是非线程安全的；</p>
+ <p>（4）TreeSet实现了NavigableSet接口，而NavigableSet继承自SortedSet接口；</p>
+ <p>（5）TreeSet实现了SortedSet接口；</p>
+ 
+  <h4>  TreeSet 要点</h4>
+  <p>（1）CopyOnWriteArraySet是用CopyOnWriteArrayList实现的；</p>
+  <p>（2）CopyOnWriteArraySet是有序的，因为底层其实是数组，数组是不是有序的？！</p>
+  <p>（3）CopyOnWriteArraySet是并发安全的，而且实现了读写分离；</p>
+  <p>（4）CopyOnWriteArraySet通过调用CopyOnWriteArrayList的addIfAbsent()方法来保证元素不重复；</p>
+
+  <h4>  ConcurrentSkipListSet 要点</h4>
+ <p>（1）ConcurrentSkipListSet底层是使用ConcurrentNavigableMap实现的；</p>
+ <p>（2）ConcurrentSkipListSet有序的，基于元素的自然排序或者通过比较器确定的顺序；</p>
+ <p>（3）ConcurrentSkipListSet是线程安全的；</p>
+ <h4>Set大汇总：</h4>
+ <table>
+ <thead>
+ <tr>
+ <th>Set</th>
+ <th>有序性</th>
+ <th>线程安全</th>
+ <th>底层实现</th>
+ <th>关键接口</th>
+ <th>特点</th>
+ </tr>
+ </thead>
+ <tbody>
+ <tr>
+ <td>HashSet</td>
+ <td>无</td>
+ <td>否</td>
+ <td>HashMap</td>
+ <td>无</td>
+ <td>简单</td>
+ </tr>
+ <tr>
+ <td>LinkedHashSet</td>
+ <td>有</td>
+ <td>否</td>
+ <td>LinkedHashMap</td>
+ <td>无</td>
+ <td>插入顺序</td>
+ </tr>
+ <tr>
+ <td>TreeSet</td>
+ <td>有</td>
+ <td>否</td>
+ <td>NavigableMap</td>
+ <td>NavigableSet</td>
+ <td>自然顺序</td>
+ </tr>
+ <tr>
+ <td>CopyOnWriteArraySet</td>
+ <td>有</td>
+ <td>是</td>
+ <td>CopyOnWriteArrayList</td>
+ <td>无</td>
+ <td>插入顺序，读写分离</td>
+ </tr>
+ <tr>
+ <td>ConcurrentSkipListSet</td>
+ <td>有</td>
+ <td>是</td>
+ <td>ConcurrentNavigableMap</td>
+ <td>NavigableSet</td>
+ <td>自然顺序</td>
+ </tr>
+ </tbody>
+ </table>
+ <p>从中我们可以发现一些规律：</p>
+ <p>（1）除了HashSet其它Set都是有序的；</p>
+ <p>（2）实现了NavigableSet或者SortedSet接口的都是自然顺序的；</p>
+ <p>（3）使用并发安全的集合实现的Set也是并发安全的；</p>
+ <p>（4）TreeSet虽然不是全部都是使用的TreeMap实现的，但其实都是跟TreeMap相关的（TreeMap的子Map中组合了TreeMap）；</p>
+ <p>（5）ConcurrentSkipListSet虽然不是全部都是使用的ConcurrentSkipListMap实现的，但其实都是跟ConcurrentSkipListMap相关的（ConcurrentSkipListeMap的子Map中组合了ConcurrentSkipListMap）；</p>
+
+ 
 <h2><span id="Queue">Queue</span></h2>
 <p>Queue是一种叫做队列的数据结构，队列是遵循着一定原则的入队出队操作的集合，一般来说，入队是在队列尾添加元素，出队是在队列头删除元素，但是，也不一定，比如优先级队列的原则就稍微有些不同。</p>
 <p><img src="https://gitee.com/alan-tang-tt/yuan/raw/master/死磕%20java集合系列/resource/Queue.png" alt="qrcode" /></p>
@@ -348,6 +441,131 @@
 <p><a href="http://cmsblogs.com/?p=4765">【死磕 Java 集合】— LinkedTransferQueue源码分析</a></p>
 <p><a href="http://cmsblogs.com/?p=4767">【死磕 Java 集合】— ConcurrentLinkedQueue源码分析</a></p>
 <p><a href="http://cmsblogs.com/?p=4769">【死磕 Java 集合】— DelayQueue源码分析</a></p>
+<h4>基础概念</p>
+<h4> 堆 </h4>
+<p>堆是一种特殊的树，只要满足下面两个条件，它就是一个堆：</p>
+<p>（1）堆是一颗完全二叉树；</p>
+<p>（2）堆中某个节点的值总是不大于（或不小于）其父节点的值。</p>
+<p>其中，我们把根节点最大的堆叫做大顶堆，根节点最小的堆叫做小顶堆。</p>
+<p>一般用数组实现 </p>
+<ul> 满二叉树</ul>
+    
+    满二叉树是指所有层都达到最大节点数的二叉树
+<ul> 完全二叉树</ul>
+    
+    完全二叉树是指除了最后一层其它层都达到最大节点数，且最后一层节点都靠左排列
+<p>插入元素时进行的堆化，也叫自下而上的堆化</p>
+<p>删除元素时进行的堆化，也叫自上而下的堆化</p>
+<p>（1）堆是一颗完全二叉树；</p>
+<p>（2）小（大）顶堆中的每一个节点都不小于（不大于）它的父节点；</p>
+<p>（3）堆的插入、删除元素的时间复杂度都是O(log n)；</p>
+<p>（4）建堆的时间复杂度是O(n)；</p>
+<p>（5）堆排序的时间复杂度是O(nlog n)；</p>
+<p>（6）堆排序的空间复杂度是O(1)；</p>
+
+<h4> PriorityQueue 要点</h4>
+<p>（1）PriorityQueue是一个小顶堆；</p>
+<p>（2）PriorityQueue是非线程安全的；</p>
+<p>（3）PriorityQueue不是有序的，只有堆顶存储着最小的元素；</p>
+<p>（4）入队就是堆的插入元素的实现；</p>
+<p>（5）出队就是堆的删除元素的实现；</p>
+<p>（6）还不懂堆？看一看这篇文章【<a href="https://mp.weixin.qq.com/s/AF2tMHfofG8b51yIyaIReg">拜托，面试别再问我堆（排序）了！</a>】。</p>
+<p>（7） 默认容量是11 旧容量小于64时，容量翻倍  旧容量大于等于64，容量只增加旧容量的一半 </p>
+
+
+<h4> ArrayBlockingQueue 要点</h4>
+<p>（1）ArrayBlockingQueue不需要扩容，因为是初始化时指定容量，并循环利用数组；</p>
+<p>（2）ArrayBlockingQueue利用takeIndex和putIndex循环利用数组；</p>
+<p>（3）入队和出队各定义了四组方法为满足不同的用途；</p>
+<p>（4）利用重入锁和两个条件保证并发安全；</p>
+
+<h4> LinkedBlockingQueue 要点</p>
+<p>（1）LinkedBlockingQueue采用单链表的形式实现；</p>
+<p>（2）LinkedBlockingQueue采用两把锁的锁分离技术实现入队出队互不阻塞；</p>
+<p>（3）LinkedBlockingQueue是有界队列，不传入容量时默认为最大int值；</p>
+
+<p>（1）LinkedBlockingQueue与ArrayBlockingQueue对比？</p>
+<p>a）后者入队出队采用一把锁，导致入队出队相互阻塞，效率低下；</p>
+<p>b）前才入队出队采用两把锁，入队出队互不干扰，效率较高；</p>
+<p>c）二者都是有界队列，如果长度相等且出队速度跟不上入队速度，都会导致大量线程阻塞；</p>
+<p>d）前者如果初始化不传入初始容量，则使用最大int值，如果出队速度跟不上入队速度，会导致队列特别长，占用大量内存；</p>
+
+
+<h4> SynchronousQueue 要点</h4>
+<p>（1）SynchronousQueue是java里的无缓冲队列，用于在两个线程之间直接移交元素；</p>
+<p>（2）SynchronousQueue有两种实现方式，一种是公平（队列）方式，一种是非公平（栈）方式；</p>
+<p>（3）栈方式中的节点有三种模式：生产者、消费者、正在匹配中；</p>
+<p>（4）栈方式的大致思路是如果栈顶元素跟自己一样的模式就入栈并等待被匹配，否则就匹配，匹配到了就返回；</p>
+<p>（5）队列方式的大致思路是QNode中有一个字段是isData 如果模式相同或空队列时进行等待操作，互补的情况下就进行消费操作。</p>
+<h5><span id="i-11"> 其他</span></h5>
+<p>（1）SynchronousQueue真的是无缓冲的队列吗？</p>
+<p>通过源码分析，我们可以发现其实SynchronousQueue内部或者使用栈或者使用队列来存储包含线程和元素值的节点，如果同一个模式的节点过多的话，它们都会存储进来，且都会阻塞着，所以，严格上来说，SynchronousQueue并不能算是一个无缓冲队列。</p>
+<p>（2）SynchronousQueue有什么缺点呢？</p>
+<p>试想一下，如果有多个生产者，但只有一个消费者，如果消费者处理不过来，是不是生产者都会阻塞起来？反之亦然。</p>
+<p>这是一件很危险的事，所以，SynchronousQueue一般用于生产、消费的速度大致相当的情况，这样才不会导致系统中过多的线程处于阻塞状态。</p>
+
+<h4> PriorityBlockingQueue 要点</h4>
+<p>（1）PriorityBlockingQueue整个入队出队的过程与PriorityQueue基本是保持一致的；</p>
+<p>（2）PriorityBlockingQueue使用一个锁+一个notEmpty条件控制并发安全；</p>
+<p>（3）PriorityBlockingQueue扩容时使用一个单独变量的CAS操作来控制只有一个线程进行扩容；</p>
+<p>（4）入队使用自下而上的堆化；</p>
+<p>（5）出队使用自上而下的堆化；</p>
+<h5><span id="i-10">其他</span></h5>
+<p>为什么PriorityBlockingQueue不需要notFull条件？</p>
+<p>因为PriorityBlockingQueue在入队的时候如果没有空间了是会自动扩容的，也就不存在队列满了的状态，也就是不需要等待通知队列不满了可以放元素了，所以也就不需要notFull条件了。</p>
+	
+	
+<h4> LinkedTransferQueue 要点</h4>
+<pre><code>a）NOW，立即返回，没有匹配到立即返回，不做入队操作
+    对应的方法有：poll()、tryTransfer(e)
+b）ASYNC，异步，元素入队但当前线程不会阻塞（相当于无界LinkedBlockingQueue的元素入队）
+    对应的方法有：add(e)、offer(e)、put(e)、offer(e, timeout, unit)
+c）SYNC，同步，元素入队后当前线程阻塞，等待被匹配到
+    对应的方法有：take()、transfer(e)
+d）TIMED，有超时，元素入队后等待一段时间被匹配，时间到了还没匹配到就返回元素本身
+    对应的方法有：poll(timeout, unit)、tryTransfer(e, timeout, unit)
+</code></pre>
+<p>（1）LinkedTransferQueue可以看作LinkedBlockingQueue、SynchronousQueue（公平模式）、ConcurrentLinkedQueue三者的集合体；</p>
+<p>（2）LinkedTransferQueue的实现方式是使用一种叫做<code>双重队列</code>的数据结构；</p>
+<p>（3）不管是取元素还是放元素都会入队；</p>
+<p>（4）先尝试跟头节点比较，如果二者模式不一样，就匹配它们，组成CP，然后返回对方的值；</p>
+<p>（5）如果二者模式一样，就入队，并自旋或阻塞等待被唤醒；</p>
+<p>（6）至于是否入队及阻塞有四种模式，NOW、ASYNC、SYNC、TIMED；</p>
+<p>（7）LinkedTransferQueue全程都没有使用synchronized、重入锁等比较重的锁，基本是通过 自旋+CAS 实现；</p>
+<p>（8）对于入队之后，先自旋一定次数后再调用LockSupport.park()或LockSupport.parkNanos阻塞；</p>
+<h5><span id="i-13">其他</span></h5>
+<p>LinkedTransferQueue与SynchronousQueue（公平模式）有什么异同呢？</p>
+<p>（1）在java8中两者的实现方式基本一致，都是使用的双重队列；</p>
+<p>（2）前者完全实现了后者，但比后者更灵活；</p>
+<p>（3）后者不管放元素还是取元素，如果没有可匹配的元素，所在的线程都会阻塞；</p>
+<p>（4）前者可以自己控制放元素是否需要阻塞线程，比如使用四个添加元素的方法就不会阻塞线程，只入队元素，使用transfer()会阻塞线程；</p>
+<p>（5）取元素两者基本一样，都会阻塞等待有新的元素进入被匹配到；</p>
+	
+<h4> LinkedTransferQueue 要点</h4>
+<p>（1）ConcurrentLinkedQueue不是阻塞队列；</p>
+<p>（2）ConcurrentLinkedQueue不能用在线程池中；</p>
+<p>（3）ConcurrentLinkedQueue使用（CAS+自旋）更新头尾节点控制出队入队操作；</p>
+<h5><span id="i-10">其他</span></h5>
+<p>ConcurrentLinkedQueue与LinkedBlockingQueue对比？</p>
+<p>（1）两者都是线程安全的队列；</p>
+<p>（2）两者都可以实现取元素时队列为空直接返回null，后者的poll()方法可以实现此功能；</p>
+<p>（3）前者全程无锁，后者全部都是使用重入锁控制的；</p>
+<p>（4）前者效率较高，后者效率较低；</p>
+<p>（5）前者无法实现如果队列为空等待元素到来的操作；</p>
+<p>（6）前者是非阻塞队列，后者是阻塞队列；</p>
+<p>（7）前者无法用在线程池中，后者可以；</p>
+
+	
+<h4> LinkedTransferQueue 要点</h4>
+<p>（1）DelayQueue是阻塞队列；</p>
+<p>（2）DelayQueue内部存储结构使用优先级队列；</p>
+<p>（3）DelayQueue使用重入锁和条件来控制并发安全；</p>
+<p>（4）DelayQueue常用于定时任务；</p>
+<p>（5）使用要搭配Delayed接口的实现  完成计时的任务</p>
+<h2><span id="i-11">其他</span></h2>
+<p>java中的线程池实现定时任务是直接用的DelayQueue吗？</p>
+<p>当然不是，ScheduledThreadPoolExecutor中使用的是它自己定义的内部类DelayedWorkQueue，其实里面的实现逻辑基本都是一样的，只不过DelayedWorkQueue里面没有使用现在的PriorityQueue，而是使用数组又实现了一遍优先级队列，本质上没有什么区别。</p>
+
 <h2><span id="Deque">Deque</span></h2>
 <p>Deque是一种特殊的队列，它的两端都可以进出元素，故而得名双端队列（Double Ended Queue）。</p>
 <p><img src="https://gitee.com/alan-tang-tt/yuan/raw/master/死磕%20java集合系列/resource/Queue.png" alt="qrcode" /></p>
