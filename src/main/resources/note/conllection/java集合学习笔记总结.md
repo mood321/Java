@@ -582,9 +582,23 @@ d）TIMED，有超时，元素入队后等待一段时间被匹配，时间到�
 <p>（9）ConcurrentLinkedDeque是怎么保证并发安全的？</p>
 <p>（10）LinkedList是List和Deque的集合体？</p>
 <p>关于Deque的问题大概就这么多，你都能回答上来吗？</p>
-<p>点击下面链接可以直接到相应的章节查看（LinkedBlockingDeque和ConcurrentLinkedDeque跟相应的Queue的实现方式基本一致，所以笔者没写这两个类的源码分析）：</p>
+<p>点击下面链接可以直接到相应的章节查看（LinkedBlockingDeque和LinkedBlockingQueueConcurrentLinkedDeque跟相应的Queue的实现方式基本一致，所以笔者没写这两个类的源码分析）：</p>
 <p><a href="http://cmsblogs.com/?p=4771">【死磕 Java 集合】— ArrayDeque源码分析</a></p>
 <p><a href="http://cmsblogs.com/?p=4725">【死磕 Java 集合】— LinkedList源码分析</a></p>
+<h4> ArrayDeque 要点</h4>
+<p>（1）ArrayDeque是采用数组方式实现的双端队列；</p>
+<p>（2）ArrayDeque的出队入队是通过头尾指针循环利用数组实现的；</p>
+<p>（3）ArrayDeque容量不足时是会扩容的，每次扩容容量增加一倍；</p>
+<p>（4）ArrayDeque可以直接作为栈使用；</p>
+
+<h4> LinkedList 要点</h4>
+<p>（1）LinkedList是一个以双链表实现的List；</p>
+<p>（2）LinkedList还是一个双端队列，具有队列、双端队列、栈的特性；</p>
+<p>（3）LinkedList在队列首尾添加、删除元素非常高效，时间复杂度为O(1)；</p>
+<p>（4）LinkedList在中间添加、删除元素比较低效，时间复杂度为O(n)；</p>
+<p>（5）LinkedList不支持随机访问，所以访问非队列首尾的元素比较低效；</p>
+<p>（6）LinkedList在功能上等于ArrayList + ArrayDeque；</p>
+
 <h2><span id="i-2">总结</span></h2>
 <p>其实上面的问题很多都具有共性，我觉得以下几个问题在看每个集合类的时候都要掌握清楚：</p>
 <p>（1）使用的数据结构？</p>
