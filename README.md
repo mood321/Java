@@ -101,5 +101,7 @@
               - [ConcurrentHashMap](https://github.com/mood321/JavaDemo/blob/master/src/main/resources/note/conllection/ConcurrentHashMap.md)
         - java集合学习笔记总结
               - [java集合学习笔记总结](https://github.com/mood321/JavaDemo/blob/master/src/main/resources/note/conllection/java集合学习笔记总结.md)
+        - java 部分面试总结
+              - [java 部分面试总结](https://github.com/mood321/JavaDemo/blob/master/src/main/resources/note/面试题记.md)
                        
    
