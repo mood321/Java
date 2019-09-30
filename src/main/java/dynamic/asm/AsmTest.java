@@ -1,5 +1,6 @@
 package dynamic.asm;
 
+import clazz.MyClassLoader;
 import jdk.internal.org.objectweb.asm.*;
 import jdk.internal.org.objectweb.asm.commons.AdviceAdapter;
 
@@ -14,18 +15,15 @@ public class AsmTest {
         ClassReader cr = new ClassReader(inputStream);//创建一个对象，接受一个被修改class类的inputStream，若只是生成class类传0
         ClassWriter cw = new ClassWriter(cr, 0);//创建一个修改class类的对象，接受ClassReader对象参数，在ClassWriter构造方法中保存了对象cr的引用
 
-        ClassVisitor cv = new ChangeVisitor( cw);
+       ClassVisitor cv = new ChangeVisitor( cw);
        // cr.accept(cv, ClassReader.EXPAND_FRAMES);//对象cr接受一个cv对象并完成class的修改
-        cr.accept( new ChangeVisitor(cw), ClassReader.SKIP_DEBUG);
-        byte[] code =   cw.toByteArray();//返回class修改完后生成新的class字节流                                                           // 获取修改后的 class 文件对应的字节数组
+        cr.accept( cv, ClassReader.SKIP_DEBUG);
+        byte[] code =   cw.toByteArray();//返回class修改完后生成新的class字节流  // 获取修改后的 class 文件对应的字节数组
         try {
             FileOutputStream fos = new FileOutputStream(AsmTest.class.getResource("Cat.class").getFile());    // 将二进制流写到本地磁盘上
             fos.write(code);
             fos.close();
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
-        try {
+
             Class clazz = Class.forName("dynamic.asm.Cat");
             Object personObj = clazz.newInstance();
             Method nameMethod = clazz.getDeclaredMethod("sayHello", null);

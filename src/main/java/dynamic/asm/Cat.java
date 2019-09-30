@@ -5,7 +5,5 @@ public class Cat {
         System.out.println("Cat.each");
     }
 
-    public static void main(String[] args) {
 
-    }
 }
