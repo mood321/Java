@@ -54,10 +54,11 @@
 
         <!-- 动态系修改class-->
         <!-- https://mvnrepository.com/artifact/asm/asm -->
+        <!-- https://mvnrepository.com/artifact/org.ow2.asm/asm -->
         <dependency>
-            <groupId>asm</groupId>
+            <groupId>org.ow2.asm</groupId>
             <artifactId>asm</artifactId>
-            <version>3.3.1</version>
+            <version>7.1 </version>
         </dependency>
         <!-- javassit-->
         <dependency>
