@@ -320,7 +320,7 @@
  <p>（4）TreeSet实现了NavigableSet接口，而NavigableSet继承自SortedSet接口；</p>
  <p>（5）TreeSet实现了SortedSet接口；</p>
  
-  <h4>  TreeSet 要点</h4>
+  <h4>  CopyOnWriteArraySet 要点</h4>
   <p>（1）CopyOnWriteArraySet是用CopyOnWriteArrayList实现的；</p>
   <p>（2）CopyOnWriteArraySet是有序的，因为底层其实是数组，数组是不是有序的？！</p>
   <p>（3）CopyOnWriteArraySet是并发安全的，而且实现了读写分离；</p>
@@ -587,7 +587,7 @@ d）TIMED，有超时，元素入队后等待一段时间被匹配，时间到�
 <p><a href="http://cmsblogs.com/?p=4725">【死磕 Java 集合】— LinkedList源码分析</a></p>
 <h4> ArrayDeque 要点</h4>
 <p>（1）ArrayDeque是采用数组方式实现的双端队列；</p>
-<p>（2）ArrayDeque的出队入队是通过头尾指针循环利用数组实现的；</p>
+<p>（CopyOnWriteArraySet2）ArrayDeque的出队入队是通过头尾指针循环利用数组实现的；</p>
 <p>（3）ArrayDeque容量不足时是会扩容的，每次扩容容量增加一倍；</p>
 <p>（4）ArrayDeque可以直接作为栈使用；</p>
 

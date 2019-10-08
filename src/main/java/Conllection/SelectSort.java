@@ -18,6 +18,11 @@ public class SelectSort {
 
 
     }
+
+    /**
+     *  归并排序法 主函数
+     * @param arr
+     */
     public static void mergeSort(int[] arr) {
         if (arr == null || arr.length < 2) {
             return;
@@ -25,17 +30,31 @@ public class SelectSort {
         mergeSort(arr, 0, arr.length - 1);
     }
 
+    /**
+     *  归并排序法 分治 并合并拆开的结果集
+     * @param arr
+     * @param l
+     * @param r
+     */
     public static void mergeSort(int[] arr, int l, int r) {
         if (l == r) {
             return;
         }
-        int mid = l + ((r - l) >> 1);
+        int mid = l + ((r - l) >> 1); //正中间一个元素下标
         mergeSort(arr, l, mid);
         mergeSort(arr, mid + 1, r);
         merge(arr, l, mid, r);
     }
+
+    /**
+     * 归并排序法  对数组 起始位置l 结束r 中间点m 两段进行合并排序
+     * @param arr
+     * @param l
+     * @param m
+     * @param r
+     */
     public static void merge(int[] arr, int l, int m, int r) {
-        int[] help = new int[r - l + 1];
+        int[] help = new int[r - l + 1]; //辅助数组
         int i = 0;
         int p1 = l;
         int p2 = m + 1;
