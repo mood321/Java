@@ -56,7 +56,9 @@
                  - [java 部分面试总结](https://github.com/mood321/JavaDemo/blob/master/src/main/resources/note/面试题记.md)
                             
         - java 算法部分学习笔记
-                 - [算法部分学习笔记](https://github.com/mood321/JavaDemo/blob/master/src/main/resources/note/Algorithm/算法学习笔记.md)
+            <ul><p> <a href="https://github.com/mood321/JavaDemo/blob/master/src/main/resources/note/Algorithm/算法学习笔记.md">算法部分学习笔记</a> 
+            <li><p> <a href="https://github.com/mood321/JavaDemo/blob/master/src/main/resources/note/Algorithm/算法学习基本数据结构和算法原型.md">算法学习基本数据结构和算法原型</a>    
+            <li> <p> <a href="https://github.com/mood321/JavaDemo/blob/master/src/main/resources/note/Algorithm/数据结构相关概念和基本数据结构及部分算法原型.md">数据结构相关概念和基本数据结构及部分算法原型</a> 
                             
                      
    
