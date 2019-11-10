@@ -62,7 +62,7 @@ public class Test {
         }*/
 
 /*echo1();*/
-
+        System.out.println(3|2);
     }
 
     private static void echo1() {
