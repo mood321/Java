@@ -54,7 +54,10 @@
                  - [集合学习-目录](https://github.com/mood321/JavaDemo/blob/master/src/main/resources/note/集合目录.md)
         - java 部分面试总结
                  - [java 部分面试总结](https://github.com/mood321/JavaDemo/blob/master/src/main/resources/note/面试题记.md)
-                            
+         
+        -  java 设计模式
+              - [java 部分面试总结](https://github.com/mood321/JavaDemo/blob/master/src/main/resources/note/设计模式笔记.md)
+                                      
         - java 算法部分学习笔记
             <ul><p> <a href="https://github.com/mood321/JavaDemo/blob/master/src/main/resources/note/Algorithm/算法学习笔记.md">算法部分学习笔记</a> 
             <li><p> <a href="https://github.com/mood321/JavaDemo/blob/master/src/main/resources/note/Algorithm/算法学习基本数据结构和算法原型.md">算法学习基本数据结构和算法原型</a>    
