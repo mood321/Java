@@ -45,7 +45,7 @@
             <artifactId>jcl-over-slf4j</artifactId>
             <version>${slf4j.version}</version>
         </dependency>
-        <!-- java.util.logging 实际调用slf4j -->
+        <!-- java.interceptor.logging 实际调用slf4j -->
         <dependency>
             <groupId>org.slf4j</groupId>
             <artifactId>jul-to-slf4j</artifactId>
@@ -111,6 +111,12 @@
             <version>8.5.40</version>
         </dependency>
         <!-- LOGGING end -->
+        <!-- mybatis -->
+        <dependency>
+            <groupId>org.mybatis</groupId>
+            <artifactId>mybatis</artifactId>
+            <version>3.5.2</version>
+        </dependency>
     </dependencies>
     <build>
         <plugins>
