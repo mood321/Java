@@ -61,7 +61,7 @@ public class Test {
             }
         }*/
 
-/*echo1();*/
+echo1();
         System.out.println(3|2);
     }
 
