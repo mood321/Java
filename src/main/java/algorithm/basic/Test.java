@@ -63,6 +63,7 @@ public class Test {
 
 echo1();
         System.out.println(3|2);
+        System.out.println(4&3);
     }
 
     private static void echo1() {
