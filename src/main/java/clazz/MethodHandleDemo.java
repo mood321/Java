@@ -13,7 +13,7 @@ import java.lang.invoke.MethodType;
  * findStatic()：对应 invokestatic
  * findVirtual()：对应 invokevirtual & invokeinterface
  * findSpecial()：对应 invokespecial
- * MethodHandle 和 Reflection 的区别
+ *
  *
  * Java 虚拟机提供了 5 个职责不同的方法调用字节码指令：
  *
@@ -23,6 +23,7 @@ import java.lang.invoke.MethodType;
  * invokeinterface：调用接口方法，会在运行时确定一个该接口的实现对象；
  * invokedynamic：在运行时动态解析出调用点限定符引用的方法，再执行该方法。
  * 
+ * MethodHandle 和 Reflection 的区别
  * 本质区别： 它们都在模拟方法调用，但是
  * Reflection 模拟的是 Java 代码层次的调用；
  * MethodHandle 模拟的是字节码层次的调用。
