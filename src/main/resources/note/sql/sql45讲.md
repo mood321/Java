@@ -688,5 +688,255 @@ mysql> insert into t(id,k) values(id1,k1),(id2,k2);
 <p> 参数innodb_max_dirty_pages_pct是脏页比例上限  默认值是75%        平时要多关注脏页比例，不要让它经常接近75%。
 <p> 在innodb中刷一个脏页 他相邻的数据页也是脏页会一起刷下去 具有传递性   innodb_flush_neighbors的值设置成0可关闭 在8中默认关闭
 
+
+### 13 | 为什么表数据删掉一半，表文件大小不变？
+<p> 参数innodb_file_per_table
+<p>    表数据既可以存在共享表空间里，也可以是单独的文件。这个行为是由参数innodb_file_per_table控制的：
+    
+<li>    这个参数设置为OFF表示的是，表的数据放在系统共享表空间，也就是跟数据字典放在一起；
+    
+ <li>    这个参数设置为ON表示的是，每个InnoDB表数据存储在一个以 .ibd为后缀的文件中。
+    
+ <p>   从MySQL 5.6.6版本开始，它的默认值就是ON了。  将innodb_file_per_table设置为ON，是推荐做法
+ 
+ #### 数据删除流程
+ <p> 记录的复用，只限于符合范围条件的数据。 删除一条数据 ，把他标记为已删除， 在插入一条范围和他符合的，可以直接复用这个空间
+ <p> 数据页的复用  如果当前页所有数据清除 或者页合并 都会 有一个页可复用  不管符不符合范围都可以复用
+ <p>不止是删除数据会造成空洞，插入数据也会。
+ 
+ #### 重建表
+ <p>1  你可以使用alter table A engine=InnoDB命令来重建表
+ <p> 流程：
+  <p>    新建一个与表A结构相同的表B，然后按照主键ID递增的顺序，把数据一行一行地从表A里读出来再插入到表B中。
+     
+ <p>     由于表B是新建的表，所以表A主键索引上的空洞，在表B中就都不存在了。显然地，表B的主键索引更紧凑，数据页的利用率也更高。
+ <p>  如果我们把表B作为临时表，数据从表A导入表B的操作完成后，用表B替换A，从效果上看，就起到了收缩表A空间的作用
+ <p> 这种方式是不online的 有新数据写入 会有数据丢失
+ 
+ <p>2 Online DDL之后，重建表的流程：
+ <li>    建立一个临时文件，扫描表A主键的所有数据页；
+ <li>    用数据页中表A的记录生成B+树，存储到临时文件中；
+ <li>    生成临时文件的过程中，将所有对A的操作记录在一个日志文件（row log）中，对应的是图中state2的状态；
+ <li>    临时文件生成后，将日志文件中的操作应用到临时文件，得到一个逻辑数据上与表A相同的数据文件，对应的就是图中state3的状态；
+ <li>    用临时文件替换表A的数据文件。
+ 
+ <img src="https://static001.geekbang.org/resource/image/2d/f0/2d1cfbbeb013b851a56390d38b5321f0.png"/>
+ <p> alter语句在启动的时候需要获取MDL写锁，但是这个写锁在真正拷贝数据之前就退化成读锁了。
+ 
+ <p> 为什么要退化呢？为了实现Online，MDL读锁不会阻塞增删改操作。
+ 
+ <p> 那为什么不干脆直接解锁呢？为了保护自己，禁止其他线程对这个表同时做DDL。
+ 
+ <p> 而对于一个大表来说，Online DDL最耗时的过程就是拷贝数据到临时表的过程，这个步骤的执行期间可以接受增删改操作。所以，相对于整个DDL过程来说，锁的时间非常短。对业务来说，就可以认为是Online的。
+ 
+ <p> 需要补充说明的是，上述的这些重建方法都会扫描原表数据和构建临时文件。对于很大的表来说，这个操作是很消耗IO和CPU资源的。因此，如果是线上服务，你要很小心地控制操作时间。如果想要比较安全的操作的话，我推荐你使用GitHub开源的gh-ost来做。
+ 
+ #### Online 和 inplace
+ 
+ <p> 在上图中，根据表A重建出来的数据是放在“tmp_file”里的，这个临时文件是InnoDB在内部创建出来的。整个DDL过程都在InnoDB内部完成。对于server层来说，没有把数据挪动到临时表，是一个“原地”操作，这就是“inplace”名称的来源
+ <p> 逻辑关系：
+  <li>DDL过程如果是Online的，就一定是inplace的；
+ <li> 反过来未必，也就是说inplace的DDL，有可能不是Online的。截止到MySQL 8.0，添加全文索引（FULLTEXT index）和空间索引(SPATIAL index)就属于这种情况。
+ <p> inplace，可能但会阻塞增删改操作，是非Online
+ 
+ <p> 三种方式重建表的区别。
+ 
+  <li>从MySQL 5.6版本开始，alter table t engine = InnoDB（也就是recreate）默认的就是上面图4的流程了；
+  <li>analyze table t 其实不是重建表，只是对表的索引信息做重新统计，没有修改数据，这个过程中加了MDL读锁；
+  <li>optimize table t 等于recreate+analyze。
+ <p> ps：重建表的时候，InnoDB不会把整张表占满，每个页留了1/16给后续的更新用。也就是说，其实重建表之后不是“最”紧凑的
+ 
+  
+### 14 | count(*)这么慢，我该怎么办？
+
+#### count(*)的实现方式
+ <p>你首先要明确的是，在不同的MySQL引擎中，count(*)有不同的实现方式。
+
+<li>MyISAM引擎把一个表的总行数存在了磁盘上，因此执行count(*)的时候会直接返回这个数，效率很高；
+<li>而InnoDB引擎就麻烦了，它执行count(*)的时候，需要把数据一行一行地从引擎里面读出来，然后累积计数
+<p> myisam 如果有where 也不会直接返回
+
+####  其他方式
+<li>MyISAM表虽然count(*)很快，但是不支持事务；
+<li>show table status命令虽然返回很快，但是不准确；
+<li>InnoDB表直接count(*)会遍历全表，虽然结果准确，但会导致性能问题。
+
+#### 不同的count用法
+<li>count(主键id)，InnoDB引擎会遍历整张表，把每一行的id值都取出来，返回给server层。server层拿到id后，判断是不可能为空的，就按行累加
+<li>count(1)，InnoDB引擎遍历整张表，但不取值。server层对于返回的每一行，放一个数字“1”进去，判断是不可能为空的，按行累加
+<li>count(字段)：
+<p>如果这个“字段”是定义为not null的话，一行行地从记录里面读出这个字段，判断不能为null，按行累加；
+<p>如果这个“字段”定义允许为null，那么执行的时候，判断到有可能是null，还要把值取出来再判断一下，不是null才累加。
+<li>但是count(*)是例外，并不会把全部字段取出来，而是专门做了优化，不取值。count(*)肯定不是null，按行累加
+<p> 结论是：按照效率排序的话，count(字段)<count(主键id)<count(1)≈count(*)，所以我建议你，尽量使用count(*)
+
+
+<h3><a href="https://www.cnblogs.com/a-phper/p/10313905.html">15 | 答疑文章（一）：日志和索引相关问题  </a>
+
+### 16 | “order by”是怎么工作的？
+
+#### 全字段排序
+<p> explain命令来看看这个语句的执行情况。
+ <img src="https://static001.geekbang.org/resource/image/82/03/826579b63225def812330ef6c344a303.png"/>   
+ <p>   Extra这个字段中的“Using filesort”表示的就是需要排序，MySQL会给每个线程分配一块内存用于排序，称为sort_buffer
+ <p> 流程如下所示 ：
+<li> 初始化sort_buffer，确定放入name、city、age这三个字段；
+<li> 从索引city找到第一个满足city='杭州’条件的主键id，也就是图中的ID_X；
+<li> 到主键id索引取出整行，取name、city、age三个字段的值，存入sort_buffer中；
+<li> 从索引city取下一个记录的主键id；
+<li> 重复步骤3、4直到city的值不满足查询条件为止，对应的主键id也就是图中的ID_Y；
+<li> 对sort_buffer中的数据按照字段name做快速排序；
+<li> 按照排序结果取前1000行返回给客户端。
+<img src="https://static001.geekbang.org/resource/image/6c/72/6c821828cddf46670f9d56e126e3e772.jpg"/>
+
+<p>可能在内存中完成，也可能需要使用外部排序，这取决于排序所需的内存和参数sort_buffer_size。
+   
+<p>   sort_buffer_size，就是MySQL为排序开辟的内存（sort_buffer）的大小。如果要排序的数据量小于sort_buffer_size，排序就在内存中完成。但如果排序数据量太大，内存放不下，则不得不利用磁盘临时文件辅助排序。
+   
+<p>   你可以用下面介绍的方法，来确定一个排序语句是否使用了临时文件。
+ <pre><code>  
+   /* 打开optimizer_trace，只对本线程有效 */
+   SET optimizer_trace='enabled=on'; 
+   /* @a保存Innodb_rows_read的初始值 */
+   select VARIABLE_VALUE into @a from  performance_schema.session_status where variable_name = 'Innodb_rows_read';
+   /* 执行语句 */
+   select city, name,age from t where city='杭州' order by name limit 1000; 
+   /* 查看 OPTIMIZER_TRACE 输出 */
+   SELECT * FROM `information_schema`.`OPTIMIZER_TRACE`\G
+   /* @b保存Innodb_rows_read的当前值 */
+   select VARIABLE_VALUE into @b from performance_schema.session_status where variable_name = 'Innodb_rows_read';
+   /* 计算Innodb_rows_read差值 */
+   select @b-@a;
+</code></pre>
+<p>   这个方法是通过查看 OPTIMIZER_TRACE 的结果来确认的，你可以从 number_of_tmp_files中看到是否使用了临时文件。
+<img src="https://static001.geekbang.org/resource/image/89/95/89baf99cdeefe90a22370e1d6f5e6495.png">
+<p> number_of_tmp_files表示的是，排序过程中使用的临时文件数。你一定奇怪，为什么需要12个文件？内存放不下时，就需要使用外部排序，外部排序一般使用归并排序算法。可以这么简单理解，MySQL将需要排序的数据分成12份，每一份单独排序后存在这些临时文件中。然后把这12个有序文件再合并成一个有序的大文件
+
+#### rowid排序
+<p> 修改一个参数，让MySQL采用另外一种算法。
+   <pre><code>
+    SET max_length_for_sort_data = 16;
+    </code></pre>
+<p>     max_length_for_sort_data，是MySQL中专门控制用于排序的行数据的长度的一个参数。它的意思是，如果单行的长度超过这个值，MySQL就认为单行太大，要换一个算法。
+    
+<p>     city、name、age 这三个字段的定义总长度是36，我把max_length_for_sort_data设置为16，我们再来看看计算过程有什么改变。
+    
+<p>     新的算法放入sort_buffer的字段，只有要排序的列（即name字段）和主键id。
+<p> 流程就变成如下所示的样子：
+    
+<li>   初始化sort_buffer，确定放入两个字段，即name和id；
+    
+<li>    从索引city找到第一个满足city='杭州’条件的主键id，也就是图中的ID_X；
+    
+<li>    到主键id索引取出整行，取name、id这两个字段，存入sort_buffer中；
+    
+<li>    从索引city取下一个记录的主键id；
+    
+<li>    重复步骤3、4直到不满足city='杭州’条件为止，也就是图中的ID_Y；
+    
+<li>    对sort_buffer中的数据按照字段name进行排序；
+    
+<li>    遍历排序结果，取前1000行，并按照id的值回到原表中取出city、name和age三个字段返回给客户端。
+    
+<p>    这个执行流程的示意图如下，我把它称为rowid排序
+<p> 这时候除了排序过程外，在排序完成后，还要根据id去原表取值。由于语句是limit 1000，因此会多读1000行
+<img src="https://static001.geekbang.org/resource/image/27/9b/27f164804d1a4689718291be5d10f89b.png" >
+<p>从OPTIMIZER_TRACE的结果中，你还能看到另外两个信息也变了。
+
+<li>sort_mode变成了<sort_key, rowid>，表示参与排序的只有name和id这两个字段。
+<li>number_of_tmp_files变成10了，是因为这时候参与排序的行数虽然仍然是4000行，但是每一行都变小了，因此需要排序的总数据量就变小了，需要的临时文件也相应地变少了。
+
+<p>ps：覆盖索引 ,因为索引是有序的 所以并不会重新排序
+
+### 17 | 如何正确地显示随机消息？
+<p> 主要在缓存表上排序
+<p> 内存临时表
+<p>    首先，你会想到用order by rand()来实现这个逻辑。
+<pre><code>    
+    mysql> select word from words order by rand() limit 3;
+</code></pre>
+<p>explain命令来看看这个语句的执行情况。
+<img src="https://static001.geekbang.org/resource/image/59/50/59a4fb0165b7ce1184e41f2d061ce350.png"/>
+<p>Extra字段显示Using temporary，表示的是需要使用临时表；Using filesort，表示的是需要执行排序操作。
+
+<p>因此这个Extra的意思就是，需要临时表，并且需要在临时表上排序
+
+<p> 在innodb中 对于内存表，回表过程只是简单地根据数据行的位置，直接访问内存得到数据，根本不会导致多访问磁盘。优化器没有了这一层顾虑，那么它会优先考虑的，就是用于排序的行越少越好了，所以，MySQL这时就会选择rowid排序
+<p>  流程是这样的：
+     
+<li>     创建一个临时表。这个临时表使用的是memory引擎，表里有两个字段，第一个字段是double类型，为了后面描述方便，记为字段R，第二个字段是varchar(64)类型，记为字段W。并且，这个表没有建索引。
+     
+<li>      从words表中，按主键顺序取出所有的word值。对于每一个word值，调用rand()函数生成一个大于0小于1的随机小数，并把这个随机小数和word分别存入临时表的R和W字段中，到此，扫描行数是10000。
+     
+<li>      现在临时表有10000行数据了，接下来你要在这个没有索引的内存临时表上，按照字段R排序。
+     
+<li>      初始化 sort_buffer。sort_buffer中有两个字段，一个是double类型，另一个是整型。
+     
+<li>      从内存临时表中一行一行地取出R值和位置信息（我后面会和你解释这里为什么是“位置信息”），分别存入sort_buffer中的两个字段里。这个过程要对内存临时表做全表扫描，此时扫描行数增加10000，变成了20000。
+     
+<li>      在sort_buffer中根据R的值进行排序。注意，这个过程没有涉及到表操作，所以不会增加扫描行数。
+     
+<li>      排序完成后，取出前三个结果的位置信息，依次到内存临时表中取出word值，返回给客户端。这个过程中，访问了表的三行数据，总扫描行数变成了20003。
+
+<p>慢查询日志（slow log）来验证一下我们分析得到的扫描行数是否正确。
+ <pre><code>  
+   # Query_time: 0.900376  Lock_time: 0.000347 Rows_sent: 3 Rows_examined: 20003
+   SET timestamp=1541402277;
+   select word from words order by rand() limit 3;</code></pre>
+<p>   其中，Rows_examined：20003就表示这个语句执行过程中扫描了20003行，也就验证了我们分析得出的结论。
+
+<img src="https://static001.geekbang.org/resource/image/2a/fc/2abe849faa7dcad0189b61238b849ffc.png">
+<p><b>order by rand()使用了内存临时表，内存临时表排序的时候使用了rowid排序方法。</b>
+
+#### 磁盘临时表
+<p>tmp_table_size这个配置限制了内存临时表的大小，默认值是16M。如果临时表大小超过了tmp_table_size，那么内存临时表就会转成磁盘临时表。
+   
+<p>   磁盘临时表使用的引擎默认是InnoDB，是由参数internal_tmp_disk_storage_engine控制的。
+   
+<p>   当使用磁盘临时表的时候，对应的就是一个没有显式索引的InnoDB表的排序过程
+
+<p>把tmp_table_size设置成1024，把sort_buffer_size设置成 32768, 把 max_length_for_sort_data 设置成16。
+ <pre><code>  
+   set tmp_table_size=1024;
+   set sort_buffer_size=32768;
+   set max_length_for_sort_data=16;
+   /* 打开 optimizer_trace，只对本线程有效 */
+   SET optimizer_trace='enabled=on'; 
+   /* 执行语句 */
+   select word from words order by rand() limit 3;
+   /* 查看 OPTIMIZER_TRACE 输出 */
+   SELECT * FROM `information_schema`.`OPTIMIZER_TRACE`\G
+   </code></pre>
+   
+   <img src="https://static001.geekbang.org/resource/image/78/ab/78d2db9a4fdba81feadccf6e878b4aab.png">
+<p>  因为将max_length_for_sort_data设置成16，小于word字段的长度定义，所以我们看到sort_mode里面显示的是rowid排序，这个是符合预期的，参与排序的是随机值R字段和rowid字段组成的行。
+   
+<p>    这时候你可能心算了一下，发现不对。R字段存放的随机值就8个字节，rowid是6个字节（至于为什么是6字节，就留给你课后思考吧），数据总行数是10000，这样算出来就有140000字节，超过了sort_buffer_size 定义的 32768字节了。但是，number_of_tmp_files的值居然是0，难道不需要用临时文件吗？
+   
+<p>    这个SQL语句的排序确实没有用到临时文件，采用是MySQL 5.6版本引入的一个新的排序算法，即：优先队列排序算法。接下来，我们就看看为什么没有使用临时文件的算法，也就是归并排序算法，而是采用了优先队列排序算法。
+   
+<p>    其实，我们现在的SQL语句，只需要取R值最小的3个rowid。但是，如果使用归并排序算法的话，虽然最终也能得到前3个值，但是这个算法结束后，已经将10000行数据都排好序了。
+   
+<p>    也就是说，后面的9997行也是有序的了。但，我们的查询并不需要这些数据是有序的。所以，想一下就明白了，这浪费了非常多的计算量。
+   
+<p>    而优先队列算法， 就是堆排序(三个元素的堆 ,向里面放，节省了空间  时间O(N)) 取出来前几条
+<p> 为什么limit 1000 没用优先队列算法
+<p> 堆的大小就是1000行的(name,rowid)，超过了我设置的sort_buffer_size大小，所以只能使用归并排序算法
+
+#### 随机排序方法
+<p> 思路: 把随机不放在sql里 ，1 取出符合的总条数 2 1-总条数的随机值 取对应数据
+
+   
+   
+
+
+
+
+
+ 
+ 
+ 
+ 
+ 
  
  

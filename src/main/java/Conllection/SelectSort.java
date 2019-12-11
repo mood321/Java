@@ -25,6 +25,8 @@ public class SelectSort {
      * @param arr
      */
     public static void mergeSort(int[] arr) {
+         // 归并排序  是一个递归二分拆分O(log2(N))  拿到两个有序数组 合并成一个有序 O(N)  时间是O(N*Log2(N)) 空间O(n)
+        // 稳定
         if (arr == null || arr.length < 2) {
             return;
         }
@@ -39,13 +41,14 @@ public class SelectSort {
      * @param r
      */
     public static void mergeSort(int[] arr, int l, int r) {
-        if (l == r) {
+        if (l == r) {      // base case 
             return;
         }
-        int mid = l + ((r - l) >> 1); //正中间一个元素下标
-        mergeSort(arr, l, mid);
-        mergeSort(arr, mid + 1, r);
-        merge(arr, l, mid, r);
+        int mid = l + (r - l) / 2;// 中间拆分
+        mergeSort(arr,l,mid);   // 左边  排序
+        mergeSort(arr, mid+1, r); // 右边
+        merge(arr,l,mid,r);// 合并排序逻辑
+        
     }
 
     /**
@@ -61,18 +64,25 @@ public class SelectSort {
         int i = 0;
         int p1 = l;
         int p2 = m + 1;
-        while (p1 <= m && p2 <= r) {
-            help[i++] = arr[p1] < arr[p2] ? arr[p1++] : arr[p2++];
+       // 四段逻辑
+        // 1 双指针排序
+        while (p1<= m && p2<= r){
+            // 谁小 放到辅助数组
+            help[i++]=arr[p1]<arr[p2] ?arr[p1++]:arr[p2++];
         }
-        while (p1 <= m) {
-            help[i++] = arr[p1++];
+        // 2 如果左边没跑完
+        while (p1<=m){
+            help[i++]=arr[p1++];
         }
-        while (p2 <= r) {
-            help[i++] = arr[p2++];
+        // 3 右边没跑完
+        while (p2<= r){
+            help[i++]=arr[p2++] ;
         }
-        for (i = 0; i < help.length; i++) {
-            arr[l + i] = help[i];
+        // 4 回写
+        for (int i1 = 0; i1 < help.length; i1++) {
+                 arr[l++]=help[i1];
         }
+        
     }
 
     /**
