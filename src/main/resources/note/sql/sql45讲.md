@@ -168,7 +168,7 @@ select * from T where ID=10;
 <li>创建版本号：指示创建一个数据行的快照时的系统版本号；
 <li>删除版本号：如果该快照的删除版本号大于当前事务版本号表示该快照有效，否则表示该快照已经被删除了。
 <p>Undo 日志
-<li>VCC 使用到的快照存储在 Undo 日志中，该日志通过回滚指针把一个数据行（Record）的所有快照连接起来。
+<li>MVCC 使用到的快照存储在 Undo 日志中，该日志通过回滚指针把一个数据行（Record）的所有快照连接起来。
 <p>实现过程
 <p>以下实现过程针对可重复读隔离级别。
 
@@ -926,6 +926,180 @@ mysql> insert into t(id,k) values(id1,k1),(id2,k2);
 #### 随机排序方法
 <p> 思路: 把随机不放在sql里 ，1 取出符合的总条数 2 1-总条数的随机值 取对应数据
 
+
+### 18 | 为什么这些SQL语句逻辑相同，性能却差异巨大？
+<p> 哪些影响索引效能的查询
+<p> 1 条件字段函数操作
+<p> 对索引字段做函数操作，可能会破坏索引值的有序性，因此优化器就决定放弃走树搜索功能。 
+<p> 放弃树搜索 仍然可以选择遍历主键索引，也可以选择遍历索引
+
+<p> 2 隐式类型转换
+<p>问题：
+<li>数据类型转换的规则是什么？
+<li>为什么有数据类型转换，就需要走全索引扫描？
+
+<p>  select “10” > 9的结果：
+<li>    如果规则是“将字符串转成数字”，那么就是做数字比较，结果应该是1；
+<li>    如果规则是“将数字转成字符串”，那么就是做字符串比较，结果应该是0。
+<p> 于字符比较相反
+<p> 有转换时 会变成 where CAST(tradid AS signed int) = 110717; 变成函数操作
+
+<p> 3   隐式字符编码转换
+<p> 在一个字符编码是utf8 一个是utf8mb4时 比较 这个设定很好理解，
+<p>字符集utf8mb4是utf8的超集，所以当这两个类型的字符串在做比较的时候，MySQL内部的操作是，先把utf8字符串转成utf8mb4字符集，再做比较
+<p>utf8mb4是utf8的超集。类似地，在程序设计语言里面，做自动类型转换的时候，为了避免数据在转换过程中由于截断导致数据错误，也都是“按数据长度增加的方向”进行转换的。
+<p> 变成 where CONVERT(traideid USING utf8mb4)="asc"
+
+<p> 2,3  最直接就是把两边格式改成一样 不然就把函数操作放在后面
+
+
+### 19 | 为什么我只查一行的语句，也执行这么慢？
+
+#### 第一类：查询长时间不返回
+<p> 大概率是表t被锁住了
+<p> 比如 lock table write 锁表未释放 或者其他DMLsuo
+<p> 使用show processlist命令查看
+<p>各字段的含义：
+<pre><code>
+1.id 该进程的标识；
+2.user 显示当前用户
+3.host 显示来源IP和端口
+4.db 显示当前连接的数据库
+5.command 显示当前连接的执行的命令，休眠 sleep ，查询 query ，连接 connect 
+6.time 此这个状态持续的时间，单位是秒
+7.state列 显示使用当前连接的sql语句的状态，很重要的列，详见下面state列的含义
+8.info 显示sql语句，长sql可能显示不全
+ 
+state列的含义：
+1.analyzing 比如进行analyze table时 
+2.checking table 线程正在执行表检查操作 
+3.cleaning up 正准备释放内存 
+4.closing tables 应该是一个快速的操作，如果不是这样的话，则应该检查硬盘空间是否已满或者磁盘io是否达到瓶颈 
+5.copy to tmp table 线程正在处理一个alter table语句 
+6.copying to tmp table 线程将数据写入内存中的临时表 
+7.copying to tmp table on disk 线程正在将数据写入磁盘中的临时表。与tmp_table_size参数有关系 
+8.creating sort index 线程正在使用内部临时表处理一个select操作 
+9.fulltext initialization  服务器正准备进行自然语言全文索引 
+10.sending data 线程正在读取和处理一条select语句的行，并且将数据发送至客户端，在此期间会执行大量的磁盘访问 
+11.sorting index 线程正在对索引页进行排序 
+12.updating 线程寻找更新匹配的行进行更新 
+13.waiting for lock_type lock 等待各个种类的表锁 
+  </code></pre>
+<p>当state列为waiting for lock_type lock时，表示某个SQL正在query导致别的SQL等待锁，需要根据id杀进程。
+<img src="https://static001.geekbang.org/resource/image/50/28/5008d7e9e22be88a9c80916df4f4b328.png">
+<p>performance_schema和sys系统库以后，就方便多了。（MySQL启动时需要设置performance_schema=on)
+其他有用命令
+
+<p>查看被锁的表
+<li>mysql> show open tables where in_use > 0;
+
+<p>查看当前的事务
+<li>mysql> select * from information_schema.innodb_trx;
+
+<p>查看被锁的事务
+mysql> select * from information_schema.innodb_locks;
+
+<p>查看等锁的事务
+<li>mysql> select * from information_schema.innodb_lock_waits;
+
+#### 等flush 
+<img src="https://static001.geekbang.org/resource/image/2d/24/2d8250398bc7f8f7dce8b6b1923c3724.png">
+
+<p> flush 操作一般两个
+<li>flush tables t with read lock;
+  
+<li>  flush tables with read lock;
+
+<p>指定表t的话，代表的是只关闭表t；如果没有指定具体的表名，则表示关闭MySQL里所有打开的表
+<p>复现步骤如图所示
+<img src="https://static001.geekbang.org/resource/image/2b/9c/2bbc77cfdb118b0d9ef3fdd679d0a69c.png">
+
+<p> 找到哪个锁表  把他kill
+
+#### 等行锁
+<p>来到引擎里了。
+<li>mysql> select * from t where id=1 lock in share mode;
+<img src="https://static001.geekbang.org/resource/image/3e/75/3e68326b967701c59770612183277475.png">
+
+<p>  事物A 也会一直锁表 不提交 需要关掉他
+<p>如果你用的是MySQL 5.7版本，可以通过sys.innodb_lock_waits 表查到。
+<p>查询方法是：
+<li>mysql> select * from t sys.innodb_lock_waits where locked_table=`'test'.'t'`\G
+
+<p> 第二类：查询慢
+ <img src="https://static001.geekbang.org/resource/image/84/ff/84667a3449dc846e393142600ee7a2ff.png">
+ <p> session B更新完100万次，生成了100万个回滚日志(undo log)。
+     
+ <p>带lock in share mode的SQL语句，是当前读，因此会直接读到1000001这个结果，所以速度很快；而select * from t where id=1这个语句，是一致性读，因此需要从1000001开始，依次执行undo log，执行了100万次以后，才将1这个结果返回
+ 
+ 
+### 20 | 幻读是什么，幻读有什么问题？
+ <img src="https://static001.geekbang.org/resource/image/5b/8b/5bc506e5884d21844126d26bbe6fa68b.png">
+<p> “幻读”：
+ 
+<li> 在可重复读隔离级别下，普通的查询是快照读，是不会看到别的事务插入的数据的。因此，幻读在“当前读”下才会出现。
+ 
+<li>  上面session B的修改结果，被session A之后的select语句用“当前读”看到，不能称为幻读。幻读仅专指“新插入的行”
+
+#### 幻读有什么问题？
+<img src="https://static001.geekbang.org/resource/image/7a/07/7a9ffa90ac3cc78db6a51ff9b9075607.png">
+
+<li>首先是语义上的。session A在T1时刻就声明了，“我要把所有d=5的行锁住，不准别的事务进行读写操作”。而实际上，这个语义被破坏了。
+<li> 数据一致性的问题。   我们知道，锁的设计是为了保证数据的一致性。而这个一致性，不止是数据库内部数据状态在此刻的一致性，还包含了数据和日志在逻辑上的一致性
+
+<img src="https://static001.geekbang.org/resource/image/dc/92/dcea7845ff0bdbee2622bf3c67d31d92.png">
+
+<p>执行完成后，数据库里会是什么结果。
+
+<li>经过T1时刻，id=5这一行变成 (5,5,100)，当然这个结果最终是在T6时刻正式提交的;
+
+<li>经过T2时刻，id=0这一行变成(0,5,5);
+
+<li>经过T4时刻，表里面多了一行(1,5,5);
+
+<p>其他行跟这个执行序列无关，保持不变。
+
+<li>这样看，这些数据也没啥问题，但是我们再来看看这时候binlog里面的内容。
+
+<li>T2时刻，session B事务提交，写入了两条语句；
+
+<li>T4时刻，session C事务提交，写入了两条语句；
+
+<li>T6时刻，session A事务提交，写入了update t set d=100 where d=5 这条语句。
+
+<p> 日志数据和实际不一致了
+<p>  把扫描的行都加上锁
+<img src="https://static001.geekbang.org/resource/image/34/47/34ad6478281709da833856084a1e3447.png">
+<p>在binlog里面，执行序列是这样的：
+  <pre><code>
+insert into t values(1,1,5); /*(1,1,5)*/
+update t set c=5 where id=1; /*(1,5,5)*/
+update t set d=100 where d=5;/*所有d=5的行，d改成100*/
+update t set d=5 where id=0; /*(0,0,5)*/
+update t set c=5 where id=0; /*(0,5,5)*/
+</code></pre>
+<p>所有的记录都加上锁，还是阻止不了新插入的记录 这就是幻读
+
+####  如何解决幻读？
+<p>新插入记录这个动作，要更新的是记录之间的“间隙”。因此，为了解决幻读问题，InnoDB只好引入新的锁，也就是间隙锁(Gap Lock)。
+<p>间隙锁和 读锁 写锁不一样 间隙锁不一样，跟间隙锁存在冲突关系的，是“往这个间隙中插入一个记录”这个操作
+<p>间隙锁和行锁合称next-key lock，每个next-key lock是前开后闭区间  索引默认有不存在的最大值 没有最小
+
+<p> 间隙锁和next-key lock的引入，帮我们解决了幻读的问题，但同时也带来了一些“困扰”。
+<img sec="https://static001.geekbang.org/resource/image/df/be/df37bf0bb9f85ea59f0540e24eb6bcbe.png">
+<p> 两个session进入互相等待状态，形成死锁。当然，InnoDB的死锁检测马上就发现了这对死锁关系，让session A的insert语句报错返回了。
+    
+ <p>你现在知道了，间隙锁的引入，可能会导致同样的语句锁住更大的范围，这其实是影响了并发度的
+ 
+ <p> 所以很多公司就使用的是读提交隔离级别加binlog_format=row的组合
+ 
+   
+
+     
+  
+     
+  
+    
    
    
 

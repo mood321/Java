@@ -7,7 +7,7 @@ import java.util.Arrays;
  * @Date 2019/10/6 0006
  * @Description 堆的操作 入堆 出堆 和堆 排序
  */
-public class Code_03_HeapSort {
+public class Code_03_MinHeapSort {
     /**
      * 堆排序 代码
      *
@@ -17,17 +17,20 @@ public class Code_03_HeapSort {
         if (arr == null || arr.length < 2) {
             return;
         }
-        //加入堆
-        for (int i = 0; i < arr.length; i++) {
+        // 思路 : 1 把所有元素放在堆
+        // 2 依据堆的特性排序
+        // 复杂度 O(N*Log2(N))       不稳定
+        
+        for (int i = 1; i < arr.length; i++) { // 可以重用数组空间  节省额外空间   从1开始
             heapInsert(arr, i);
         }
+        // 出堆
+        // 每次出堆  堆大小-1  拿出元素放在数组里
+        for (int i = arr.length; i > 0; i--) {
+            heapify(arr, 0, i);
 
-        int size = arr.length;
-        swap(arr, 0, --size);// 把最大值放到最后  堆范围-1
-        while (size > 0) {
-            heapify(arr, 0, size);
-            swap(arr, 0, --size);
         }
+
     }
 
     /**
@@ -38,7 +41,8 @@ public class Code_03_HeapSort {
      * @param index
      */
     public static void heapInsert(int[] arr, int index) {
-        while (arr[index] > arr[(index - 1) / 2]) {
+        // 入堆 思路, 放在最后节点 向上冒  和父节点比
+        while (arr[index] < arr[(index - 1) / 2]) {
             swap(arr, index, (index - 1) / 2);
             index = (index - 1) / 2;
         }
@@ -51,26 +55,30 @@ public class Code_03_HeapSort {
      * <p> 2.继续堆化  此时顶点的数据 不一定是最大的 他需要和子节点大的比较 大于则不动 小于交换
      * <p> ps:（此处不是和每个节点比较 因为堆只要求父节点大于子节点 不要求左节点小于右节点）
      * <p> 3.交换后 继续2的操作
-     * 此方法只做2-3
+     * 此方法只做2-3   ps: 可以做
      *
      * @param arr
      * @param index
      * @param size
      */
     public static void heapify(int[] arr, int index, int size) {
-        int left = index * 2 + 1; // 拿到左节点下标
-        while (left < size) { // 规定范围 且让左节点必须存在
-            int largest = left + 1 < size && arr[left + 1] > arr[left] ? left + 1 : left;// 有节点存在 且大于右节点 给右节点 不然返回左节点
-            largest = arr[largest] > arr[index] ? largest : index;//
-            if (largest == index) {
+        // 先交换
+        swap(arr, index, --size);
+        int left = index * 2 + 1;
+        while (left < size) {
+            // 主题逻辑  左右大小  然后大的和父 谁小
+            int min = left + 1 < size && arr[left + 1] < arr[left] ? left + 1 : left;   // 取子节点 谁小
+            min = arr[index] > arr[min] ? min : index;
+            if (index == min) {
                 break;
             }
-            // 走到这  说明子节点较大
-            swap(arr, index, largest);// 交换
-            index = largest;// 当前节点来到交换后的节点
-            left = index * 2 + 1;
+
+            swap(arr, index, min);
+            index=min;
+            left=min*2+1;
 
         }
+
 
     }
 
