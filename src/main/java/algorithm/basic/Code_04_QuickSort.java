@@ -13,9 +13,39 @@ public class Code_04_QuickSort {
         if(arr==null || arr.length<2){
             return;
         }
+        //  快排的思路  拿一个 出来  小的放左边  大的放右边    然后一直拆  拆到大小为1  O(N*Log2(N))
+        // 不稳定
         quickSort(arr,0,arr.length-1);
     }
-    public static void quickSort(int[] arr, int l, int r) {
+
+    private static void quickSort(int[] arr, int l, int r) {
+           if(l>=r){
+               return;
+           }
+           // 范围应该在-1 和r+1  但要留一个位置 给选的数 
+        swap(arr, l + (int) (Math.random() * (r - l + 1)), r);   // 在L 和R 范围选随机数
+        int[] p = partition(arr, l, r); // 递归 分治    
+          quickSort(arr,l,p[0]-1);
+          quickSort(arr,p[1]+1,r);
+    }
+
+    private static int[] partition(int[] arr, int l, int r) {
+        int less=l-1,more=r;
+        int num  = arr[r];  // num 是随机选出来的
+        while (l<more){
+             if (arr[l]<num){
+                 swap(arr,l++,++less);// 把小于的值放到 属于小于范围来
+             }else if(arr[l]>num){
+                 swap(arr,l,--more);// 同理  但l不变
+             }else {
+                 l++;
+             }
+        }
+        swap(arr,r,more);
+        return  new int[]{less+1,more};
+
+    }
+  /*  public static void quickSort(int[] arr, int l, int r) {
         if(l<r){ //只有数组 有多个元素才排序  这也是递归结束条件
             // 在普通快速排序中  排序时间复杂度 受数据状况有关  如果最后一个数据项正好是整个数组的等于区域的数 是O(N*log(N))
             // 改进 不固定用最后一个  书籍用一个数放在最后 去拍
@@ -39,7 +69,7 @@ public class Code_04_QuickSort {
         }
         swap(arr,more,r);// r位置必定是 等于r的 交换到等于区域
         return new int[]{less+1,more}; // 返回等于区域的下标
-    }
+    }*/
 
     public static void swap(int[] arr, int i, int j) {
         int tmp = arr[i];

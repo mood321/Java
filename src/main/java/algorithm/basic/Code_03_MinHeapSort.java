@@ -1,6 +1,7 @@
 package algorithm.basic;
 
 import java.util.Arrays;
+import java.util.Comparator;
 
 /**
  * @Created by mood321
@@ -21,7 +22,7 @@ public class Code_03_MinHeapSort {
         // 2 依据堆的特性排序
         // 复杂度 O(N*Log2(N))       不稳定
         
-        for (int i = 1; i < arr.length; i++) { // 可以重用数组空间  节省额外空间   从1开始
+        for (int i = 0; i < arr.length; i++) { // 可以重用数组空间  节省额外空间   从1开始
             heapInsert(arr, i);
         }
         // 出堆
@@ -89,10 +90,16 @@ public class Code_03_MinHeapSort {
     }
 
     // for test
-    public static void comparator(int[] arr) {
-        Arrays.sort(arr);
-    }
+    public static void comparator(Integer[] arr) {
+        Arrays.sort(arr,new MinComparator());
 
+    }
+    public  static  class MinComparator implements  Comparator<Integer>{
+        @Override
+        public int compare(Integer o1, Integer o2) {
+            return o2-o1;
+        }
+    }
     // for test
     public static int[] generateRandomArray(int maxSize, int maxValue) {
         int[] arr = new int[(int) ((maxSize + 1) * Math.random())];
@@ -103,11 +110,11 @@ public class Code_03_MinHeapSort {
     }
 
     // for test
-    public static int[] copyArray(int[] arr) {
+    public static Integer[] copyArray(int[] arr) {
         if (arr == null) {
             return null;
         }
-        int[] res = new int[arr.length];
+        Integer[] res = new Integer[arr.length];
         for (int i = 0; i < arr.length; i++) {
             res[i] = arr[i];
         }
@@ -115,7 +122,7 @@ public class Code_03_MinHeapSort {
     }
 
     // for test
-    public static boolean isEqual(int[] arr1, int[] arr2) {
+    public static boolean isEqual(int[] arr1, Integer[] arr2) {
         if ((arr1 == null && arr2 != null) || (arr1 != null && arr2 == null)) {
             return false;
         }
@@ -152,7 +159,7 @@ public class Code_03_MinHeapSort {
         boolean succeed = true;
         for (int i = 0; i < testTime; i++) {
             int[] arr1 = generateRandomArray(maxSize, maxValue);
-            int[] arr2 = copyArray(arr1);
+            Integer[] arr2 = copyArray(arr1);
             heapSort(arr1);
             comparator(arr2);
             if (!isEqual(arr1, arr2)) {
@@ -164,6 +171,7 @@ public class Code_03_MinHeapSort {
 
         int[] arr = generateRandomArray(maxSize, maxValue);
         printArray(arr);
+        //arr =new  int[] {5, 2, 8, 4, 1, 9, 16};
         heapSort(arr);
         printArray(arr);
     }

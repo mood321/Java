@@ -1093,7 +1093,187 @@ update t set c=5 where id=0; /*(0,5,5)*/
  
  <p> 所以很多公司就使用的是读提交隔离级别加binlog_format=row的组合
  
+
+### 21 | 为什么我只改一行的语句，锁这么多？
+<p> 主要next-key lock 临健锁 的上锁详情
+<p><a href="https://www.cnblogs.com/a-phper/p/10313940.html"> 为什么我只改一行的语句，锁这么多？ </a>
+<p> 主要规则:    包含了两个“原则”、两个“优化”和一个“bug”。
+             
+<li>   原则1：加锁的基本单位是next-key lock。希望你还记得，next-key lock是前开后闭区间。
+<li>   原则2：查找过程中访问到的对象才会加锁。
+<li>   优化1：索引上的等值查询，给唯一索引加锁的时候，next-key lock退化为行锁。
+<li>   优化2：索引上的等值查询，向右遍历时且最后一个值不满足等值条件的时候，next-key lock退化为间隙锁。
+<li>   一个bug：唯一索引上的范围查询会访问到不满足条件的第一个值为止。
+
+<p> 根据实例总结:
+<li> 加锁单位是next-key lock 左闭右开
+<li> 覆盖索引 没有实际访问对象 只会有一个间隙锁
+<li> 主键上的等值 会变成行锁 ，如果有范围 会走到不满足的行 加上next-key
+<li> 非主键 不会优化 还是next-key，有范围 还是走到不满足 加上next-key
+<li> 如果索引上有等值的  他们之间也有间隙
+<li> 索引上只有等值 没有范围条件 ，next-key会退化成间隙锁
+<li> limit 范围会加上一个next-key 后面不加锁
+<li> 两个事物相互加 next-key ，会死锁 mysql 会让一个回滚
+
+<p> ps: 加next-key 都是在可重复读隔离级别(repeatable-read)下的
+<p> 添加<a href="https://github.com/mood321/JavaDemo/blob/master/src/main/resources/note/sql/Mysql常用命令.MD">Mysql常用命令.MD</a>
+
+###    22 | MySQL有哪些“饮鸩止渴”提高性能的方法？
+<p> 第一种方法：先处理掉那些占着连接但是不工作的线程。
+<p> 第二种方法：减少连接过程的消耗。
+<p> 慢查询处理：1 索引没有设计好 2 语句不正确 3 MySQL选错了索引
+
+###  23 | MySQL是怎么保证数据不丢的？
+<p> MySQL写入binlog和redo log的流程
+
+
+####  1 binlog的写入机制
+<p> 事务执行过程中，先把日志写到binlog cache，事务提交的时候，再把binlog cache写到binlog文件中。
+
+<img src="https://static001.geekbang.org/resource/image/9e/3e/9ed86644d5f39efb0efec595abb92e3e.png">
+<p>线程有自己binlog cache，但是共用同一份binlog文件。
+
+<li>图中的write，指的就是指把日志写入到文件系统的page cache，并没有把数据持久化到磁盘，所以速度比较快。
+<li>图中的fsync，才是将数据持久化到磁盘的操作。一般情况下，我们认为fsync才占磁盘的IOPS。
+<p>write 和fsync的时机，是由参数sync_binlog控制的：
+
+<li>sync_binlog=0的时候，表示每次提交事务都只write，不fsync；
+
+<li>sync_binlog=1的时候，表示每次提交事务都会执行fsync；
+
+<li>sync_binlog=N(N>1)的时候，表示每次提交事务都write，但累积N个事务后才fsync。
+
+<p>因此，在出现IO瓶颈的场景里，将sync_binlog设置成一个比较大的值，可以提升性能。在实际的业务场景中，考虑到丢失日志量的可控性，一般不建议将这个参数设成0，比较常见的是将其设置为100~1000中的某个数值。
+
+<p>但是，将sync_binlog设置为N，对应的风险是：如果主机发生异常重启，会丢失最近N个事务的binlog日志。
+
+#### redo log的写入机制
+<p>状态分别是：
+
+<li>存在redo log buffer中，物理上是在MySQL进程内存中，就是图中的红色部分；
+
+<li>写到磁盘(write)，但是没有持久化（fsync)，物理上是在文件系统的page cache里面，也就是图中的黄色部分；
+
+<li>持久化到磁盘，对应的是hard disk，也就是图中的绿色部分。
+
+<p>日志写到redo log buffer是很快的，wirte到page cache也差不多，但是持久化到磁盘的速度就慢多了。
+
+<p>为了控制redo log的写入策略，InnoDB提供了innodb_flush_log_at_trx_commit参数，它有三种可能取值：
+
+<li>设置为0的时候，表示每次事务提交时都只是把redo log留在redo log buffer中;
+
+<li>设置为1的时候，表示每次事务提交时都将redo log直接持久化到磁盘；
+
+<li>设置为2的时候，表示每次事务提交时都只是把redo log写到page cache。
+
+<p>InnoDB有一个后台线程，每隔1秒，就会把redo log buffer中的日志，调用write写到文件系统的page cache，然后调用fsync持久化到磁盘。
+
+<p>实际上，除了后台线程每秒一次的轮询操作外，还有两种场景会让一个没有提交的事务的redo log写入到磁盘中。
    
+<li>   一种是，redo log buffer占用的空间即将达到 innodb_log_buffer_size一半的时候，后台线程会主动写盘。注意，由于这个事务并没有提交，所以这个写盘动作只是write，而没有调用fsync，也就是只留在了文件系统的page cache。
+   
+<li>   另一种是，并行的事务提交的时候，顺带将这个事务的redo log buffer持久化到磁盘。假设一个事务A执行到一半，已经写了一些redo log到buffer中，这时候有另外一个线程的事务B提交，如果innodb_flush_log_at_trx_commit设置的是1，那么按照这个参数的逻辑，事务B要把redo log buffer里的日志全部持久化到磁盘。这时候，就会带上事务A在redo log buffer里的日志一起持久化到磁盘
+
+#### redo log 的组提交
+<p> 主要就是拖时间 多个一起提交 节约磁盘IOPS
+<img src="https://static001.geekbang.org/resource/image/93/cc/933fdc052c6339de2aa3bf3f65b188cc.png">
+<p>从图中可以看到，
+
+<li>trx1是第一个到达的，会被选为这组的 leader；
+
+<li>等trx1要开始写盘的时候，这个组里面已经有了三个事务，这时候LSN也变成了160；
+
+<li>trx1去写盘的时候，带的就是LSN=160，因此等trx1返回时，所有LSN小于等于160的redo log，都已经被持久化到磁盘；
+
+<li>这时候trx2和trx3就可以直接返回了。
+
+<p>所以，一次组提交里面，组员越多，节约磁盘IOPS的效果越好。但如果只有单线程压测，那就只能老老实实地一个事务对应一次持久化操作了。
+
+#### bin_log 的组提交
+<p>设置 binlog_group_commit_sync_delay 和 binlog_group_commit_sync_no_delay_count来实现。
+
+<li>binlog_group_commit_sync_delay参数，表示延迟多少微秒后才调用fsync;
+
+<li>binlog_group_commit_sync_no_delay_count参数，表示累积多少次以后才调用fsync。
+
+<p>这两个条件是或的关系，也就是说只要有一个满足条件就会调用fsync。
+
+<p>所以，当binlog_group_commit_sync_delay设置为0的时候，binlog_group_commit_sync_no_delay_count也无效了
+
+#### 日志的持久化
+<img sec="https://static001.geekbang.org/resource/image/5a/28/5ae7d074c34bc5bd55c82781de670c28.png">
+
+#### 针对日志提升性能  可以考虑以下三种方法：
+
+<li>设置 binlog_group_commit_sync_delay 和 binlog_group_commit_sync_no_delay_count参数，减少binlog的写盘次数。这个方法是基于“额外的故意等待”来实现的，因此可能会增加语句的响应时间，但没有丢失数据的风险。
+
+<li>将sync_binlog 设置为大于1的值（比较常见是100~1000）。这样做的风险是，主机掉电时会丢binlog日志。
+
+<li>将innodb_flush_log_at_trx_commit设置为2。这样做的风险是，主机掉电的时候会丢数据。
+
+
+###  24 | MySQL是怎么保证主备一致的？
+<p> 主从之间,binlog的使用
+
+#### MySQL主备的基本原理
+<img src="https://static001.geekbang.org/resource/image/fd/10/fd75a2b37ae6ca709b7f16fe060c2c10.png">
+
+<p>客户端的读写都直接访问节点A，而节点B是A的备库，只是将A的更新都同步过来，到本地执行。这样可以保持节点B和A的数据是相同的。
+
+<p>当需要切换的时候，就切成状态2。这时候客户端读写访问的都是节点B，而节点A是B的备库。
+
+<p>在状态1中，虽然节点B没有被直接访问，但是我依然建议你把节点B（也就是备库）设置成只读（readonly）模式。这样做，有以下几个考虑：
+
+<li>有时候一些运营类的查询语句会被放到备库上去查，设置为只读可以防止误操作；
+
+<li>防止切换逻辑有bug，比如切换过程中出现双写，造成主备不一致；
+
+<li>可以用readonly状态，来判断节点的角色
+
+
+<p>节点A到B这条线的内部流程
+<img src="https://static001.geekbang.org/resource/image/a6/a3/a66c154c1bc51e071dd2cc8c1d6ca6a3.png">
+<p>一个事务日志同步的完整过程是这样的：
+<li>在备库B上通过change master命令，设置主库A的IP、端口、用户名、密码，以及要从哪个位置开始请求binlog，这个位置包含文件名和日志偏移量。
+<li>在备库B上执行start slave命令，这时候备库会启动两个线程，就是图中的io_thread和sql_thread。其中io_thread负责与主库建立连接。
+<li>主库A校验完用户名、密码后，开始按照备库B传过来的位置，从本地读取binlog，发给B。
+<li>备库B拿到binlog后，写到本地文件，称为中转日志（relay log）。
+<li>sql_thread读取中转日志，解析出日志里的命令，并执行。  
+
+#### binlog的三种格式对比
+
+<p> statement格式
+<p> 优点
+<li> 占用空间小 快
+<p> 缺点
+<li> 主从之间 可能选用索引不一样  数据不一致
+<li> 确定的函数（如uuid(),now()）会出现主从数据不一致问题
+<p> ROW 格式
+<p> 数据一致性有保证 但占用空间大
+
+<p>Mixed格
+<p> mysql 自己选用哪种格式
+
+#### 循环复制问题
+<p> binlog的特性确保了在备库执行相同的binlog，可以得到与主库相同的状态 但上面是M-S模式 但实际生产上使用比较多的是双M结构
+<img src="https://static001.geekbang.org/resource/image/20/56/20ad4e163115198dc6cf372d5116c956.png">
+
+<p>双M结构还有一个问题需要解决。
+
+<p>业务逻辑在节点A上更新了一条语句，然后再把生成的binlog 发给节点B，节点B执行完这条更新语句后也会生成binlog。
+<p>（我建议你把参数log_slave_updates设置为on，表示备库执行relay log后生成binlog）
+
+<p>MySQL在binlog中记录了这个命令第一次执行时所在实例的server id。因此，我们可以用下面的逻辑，来解决两个节点间的循环复制的问题：
+
+<p>规定两个库的server id必须不同，如果相同，则它们之间不能设定为主备关系；
+
+<p>一个备库接到binlog并在重放的过程中，生成与原binlog的server id相同的新的binlog；
+
+<p>每个库在收到从自己的主库发过来的日志后，先判断server id，如果跟自己的相同，表示这个日志是自己生成的，就直接丢弃这个日志
+
+
+ 
+
 
      
   
