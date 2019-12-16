@@ -41,3 +41,10 @@
 <p>set session transaction level read committed;设置事务的隔离级别
 
 <p>show variables like "log_bin" 是否开启bin_log日志
+<p>set sql_log_bin=on|OFF     停止对bin-log日志的写入 多用于主从临时修改 
+
+<p> binlog 配置
+<pre><code>
+[mysqld]
+log-bin=mysql-bin
+server-id=1</code></pre>
