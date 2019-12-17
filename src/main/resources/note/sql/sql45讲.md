@@ -1762,12 +1762,168 @@ master_auto_position=1   </code></pre>
 
 <li>否则，到主库执行查询语句。
 <p> 流程和上一个一样
+
+
+### 29 | 如何判断一个数据库是不是出问题了？
+
+#### select 1判断
+<p> 能查询进程状态 不能确认库的状态
+<p> innodb_thread_concurrency   这个参数的默认值是0，表示不限制并发线程数量。但是，不限制并发线程数肯定是不行的 通常设置成64-128
+<p> 并发连接和并发查询
+<li> 在show processlist的结果里，看到的几千个连接，指的就是并发连接。而“当前正在执行”的语句，才是我们所说的并发查询
+<p> 在线程进入锁等待以后，并发线程的计数会减一，也就是说等行锁（也包括间隙锁）的线程是不算在128里面的。
+    
+<li>    MySQL这样设计是非常有意义的。因为，进入锁等待的线程已经不吃CPU了；更重要的是，必须这么设计，才能避免整个系统锁死。
+<li>    为什么呢？假设处于锁等待的线程也占并发线程的计数，你可以设想一下这个场景：
+<li>    线程1执行begin; update t set c=c+1 where id=1, 启动了事务trx1， 然后保持这个状态。这时候，线程处于空闲状态，不算在并发线程里面。
+<li>    线程2到线程129都执行 update t set c=c+1 where id=1; 由于等行锁，进入等待状态。这样就有128个线程处于等待状态；
+<li>    如果处于锁等待状态的线程计数不减一，InnoDB就会认为线程数用满了，会阻止其他语句进入引擎执行，这样线程1不能提交事务。而另外的128个线程又处于锁等待状态，整个系统就堵住了。
+
+    
+#### 查表判断
+<p>在系统库（mysql库）里创建一个表，比如命名为health_check，里面只放一行数据，然后定期执行：
+<p> 这种方法能检测并发线程过多导致的数据库不可用的情况。 空间满了以后，这种方法又会变得不好使。
+<p> 如 空间满了 要写入bin_log  但写不进去  返回结果却是对的
+
+#### 更新判断
+<p>用更新，放个有意义的字段，常见做法是放一个timestamp字段，用来表示最后一次执行检测的时间
+<p> 因为这儿如果有主从 update now() 有可能数据不一致 所以要加个字段 一般用server-id 主从之间一定不一致
+<pre><code>
+mysql> CREATE TABLE `health_check` (
+  `id` int(11) NOT NULL,
+  `t_modified` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`)
+) ENGINE=InnoDB;
+/* 检测命令 */
+insert into mysql.health_check(id, t_modified) values (@@server_id, now()) on duplicate key update t_modified=now();
+</code></pre>
+
+<p>更新语句，如果失败或者超时，就可以发起主备切换了，为什么还会有判定慢的问题呢
+<p> 设想一个日志盘的IO利用率已经是100%的场景。这时候，整个系统响应非常慢，已经需要做主备切换了。
+<p>    但是你要知道，IO利用率100%表示系统的IO是在工作的，每个请求都有机会获得IO资源，执行自己的任务。而我们的检测使用的update命令，需要的资源很少，所以可能在拿到IO资源的时候就可以提交成功，并且在超时时间N秒未到达之前就返回给了检测系统。
+<p>    检测系统一看，update命令没有超时，于是就得到了“系统正常”的结论。
+
+<p>所有外部检测都会有随机性 毕竟是轮询
+
+#### 内部统计
+MySQL 5.6版本以后提供的performance_schema库，就在file_summary_by_event_name表里统计了每次IO请求的时间。
+
+file_summary_by_event_name表里有很多行数据，我们先来看看event_name='wait/io/file/innodb/innodb_log_file’这一行。
+
+<img src="https://static001.geekbang.org/resource/image/75/dd/752ccfe43b4eab155be17401838c62dd.png">
+
+
+ performance_schema.file_summary_by_event_name的一行
+图中这一行表示统计的是redo log的写入时间，第一列EVENT_NAME 表示统计的类型。
+
+接下来的三组数据，显示的是redo log操作的时间统计。
+
+第一组五列，是所有IO类型的统计。其中，COUNT_STAR是所有IO的总次数，接下来四列是具体的统计项， 单位是皮秒；前缀SUM、MIN、AVG、MAX，顾名思义指的就是总和、最小值、平均值和最大值。
+
+第二组六列，是读操作的统计。最后一列SUM_NUMBER_OF_BYTES_READ统计的是，总共从redo log里读了多少个字节。
+
+第三组六列，统计的是写操作。
+
+最后的第四组数据，是对其他类型数据的统计。在redo log里，你可以认为它们就是对fsync的统计。
+
+在performance_schema库的file_summary_by_event_name表里，binlog对应的是event_name = "wait/io/file/sql/binlog"这一行。各个字段的统计逻辑，与redo log的各个字段完全相同。这里，我就不再赘述了。
+
+因为我们每一次操作数据库，performance_schema都需要额外地统计这些信息，所以我们打开这个统计功能是有性能损耗的。
+
+我的测试结果是，如果打开所有的performance_schema项，性能大概会下降10%左右。所以，我建议你只打开自己需要的项进行统计。你可以通过下面的方法打开或者关闭某个具体项的统计。
+
+如果要打开redo log的时间监控，你可以执行这个语句：
+>mysql> update setup_instruments set ENABLED='YES', Timed='YES' where name like '%wait/io/file/innodb/innodb_log_file%';
+
+假设，现在你已经开启了redo log和binlog这两个统计信息，那要怎么把这个信息用在实例状态诊断上呢？
+
+很简单，你可以通过MAX_TIMER的值来判断数据库是否出问题了。比如，你可以设定阈值，单次IO请求时间超过200毫秒属于异常，然后使用类似下面这条语句作为检测逻辑。
+>mysql> select event_name,MAX_TIMER_WAIT  FROM performance_schema.file_summary_by_event_name where event_name in ('wait/io/file/innodb/innodb_log_file','wait/io/file/sql/binlog') and MAX_TIMER_WAIT>200*1000000000;
+
+发现异常后，取到你需要的信息，再通过下面这条语句：
+
+>mysql> truncate table performance_schema.file_summary_by_event_name;
+
+把之前的统计信息清空。这样如果后面的监控中，再次出现这个异常，就可以加入监控累积值了。
+    
   
+ ### <a href="https://www.cnblogs.com/a-phper/p/10313974.html">30 | 答疑文章（二）：用动态的观点看加锁</a>
+ 
+ 
+### 31 | 误删数据后除了跑路，还能怎么办？
+
+#### 误删行
+<p> Flashback恢复数据的原理，是修改binlog的内容，拿回原库重放。而能够使用这个方案的前提是，需要确保binlog_format=row 和 binlog_row_image=FULL。
+    
+<p>    具体恢复数据时，对单个事务做如下处理：
+    
+<li>    对于insert语句，对应的binlog event类型是Write_rows event，把它改成Delete_rows event即可；
+    
+<li>     同理，对于delete语句，也是将Delete_rows event改为Write_rows event；
+    
+<li>     而如果是Update_rows的话，binlog里面记录了数据行修改前和修改后的值，对调这两行的位置即可。
+    
+<p>    如果误操作不是一个，而是多个，会怎么样呢？比如下面三个事务：
+<pre><code>    
+    (A)delete ...
+    (B)insert ...
+    (C)update ...
+    </code></pre>
+<p>    现在要把数据库恢复回这三个事务操作之前的状态，用Flashback工具解析binlog后，写回主库的命令是：
+<pre><code>    
+    (reverse C)update ...
+    (reverse B)delete ...
+    (reverse A)insert ...  
+    </code></pre>
+    
+ <p> 恢复数据比较安全的做法，是恢复出一个备份，或者找一个从库作为临时库，在这个临时库上执行这些操作，然后再将确认过的临时库的数据，恢复回主库。
+ 
+ <p>不止要说误删数据的事后处理办法，更重要是要做到事前预防。我有以下两个建议：
+    
+<li>    把sql_safe_updates参数设置为on。这样一来，如果我们忘记在delete或者update语句中写where条件，或者where条件里面没有包含索引字段的话，这条语句的执行就会报错。
+    
+<li>    代码上线前，必须经过SQL审计。
     
    
+#### 误删库/表
+<p>恢复数据，就需要使用全量备份，加增量日志的方式了。这个方案要求线上有定期的全量备份，并且实时备份binlog。
    
+<p>   在这两个条件都具备的情况下，假如有人中午12点误删了一个库，恢复数据的流程如下：
+   
+<li>   取最近一次全量备份，假设这个库是一天一备，上次备份是当天0点；
+   
+<li>   用备份恢复出一个临时库；
+   
+<li>   从日志备份里面，取出凌晨0点之后的日志；
+   
+<li>   把这些日志，除了误删除数据的语句外，全部应用到临时库 
 
 
+####  延迟复制备库
+<p>延迟复制的备库是一种特殊的备库，通过 CHANGE MASTER TO MASTER_DELAY = N命令，可以指定这个备库持续保持跟主库有N秒的延迟。
+
+<p>比如你把N设置为3600，这就代表了如果主库上有数据被误删了，并且在1小时内发现了这个误操作命令，这个命令就还没有在这个延迟复制的备库执行。这时候到这个备库上执行stop slave，再通过之前介绍的方法，跳过误操作命令，就可以恢复出需要的数据。
+
+<p>这样的话，你就随时可以得到一个，只需要最多再追1小时，就可以恢复出数据的临时实例，也就缩短了整个数据恢复需要的时间。
+
+#### 预防误删库/表的方法
+
+<p>账号分离。这样做的目的是，避免写错命令。比如：
+
+<li>我们只给业务开发同学DML权限，而不给truncate/drop权限。而如果业务开发人员有DDL需求的话，也可以通过开发管理系统得到支持。
+<li>即使是DBA团队成员，日常也都规定只使用只读账号，必要的时候才使用有更新权限的账号。
+<p>第二条建议是，制定操作规范。这样做的目的，是避免写错要删除的表名。比如：
+
+<li>在删除数据表之前，必须先对表做改名操作。然后，观察一段时间，确保对业务无影响以后再删除这张表。
+<li>改表名的时候，要求给表名加固定的后缀（比如加_to_be_deleted)，然后删除表的动作必须通过管理系统执行。并且，管理系删除表的时候，只能删除固定后缀的表。
+
+
+#### rm删除数据
+<p>对于一个有高可用机制的MySQL集群来说，最不怕的就是rm删除数据了。只要不是恶意地把整个集群删除，而只是删掉了其中某一个节点的数据的话，HA系统就会开始工作，选出一个新的主库，从而保证整个集群的正常工作。
+
+<p>这时，你要做的就是在这个节点上把数据恢复回来，再接入整个集群。
+
+<p>当然了，现在不止是DBA有自动化系统，SA（系统管理员）也有自动化系统，所以也许一个批量下线机器的操作，会让你整个MySQL集群的所有节点都全军覆没。
 
 
 
