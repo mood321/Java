@@ -2243,3 +2243,226 @@ select SQL_BIG_RESULT id%100 as m, count(*) as c from t1 group by m;</code></pre
 <li>如果数据量实在太大，使用SQL_BIG_RESULT这个提示，来告诉优化器直接使用排序算法得到group by的结果。
  
  
+ ###    38 | 都说InnoDB好，那还要不要使用Memory引擎？
+ <p> 主体 memory 的特性
+ <p>  内存表的数据部分以数组的方式单独存放，而主键id索引里，存的是每个数据的位置。主键id是hash索引，可以看到索引上的key并不是有序的
+ <p>  InnoDB和Memory引擎的数据组织方式是不同的：
+      
+ <li>     InnoDB引擎把数据放在主键索引上，其他索引上保存的是主键id。这种方式，我们称之为索引组织表（Index Organizied Table）。
+  <li>      而Memory引擎采用的是把数据单独存放，索引上保存数据位置的数据组织形式，我们称之为堆组织表（Heap Organizied Table）。
+ <p>       从中我们可以看出，这两个引擎的一些典型不同：
+      
+<li>      InnoDB表的数据总是有序存放的，而内存表的数据就是按照写入顺序存放的；
+      
+<li>      当数据文件有空洞的时候，InnoDB表在插入新数据的时候，为了保证数据有序性，只能在固定的位置写入新值，而内存表找到空位就可以插入新值；
+      
+<li>      数据位置发生变化的时候，InnoDB表只需要修改主键索引，而内存表需要修改所有索引；
+      
+<li>      InnoDB表用主键索引查询时需要走一次索引查找，用普通索引查询的时候，需要走两次索引查找。而内存表没有这个区别，所有索引的“地位”都是相同的。
+      
+<li>      InnoDB支持变长数据类型，不同记录的长度可能不同；内存表不支持Blob 和 Text字段，并且即使定义了varchar(N)，实际也当作char(N)，也就是固定长度字符串来存储，因此内存表的每行数据长度相同。
+
+
+#### hash索引和B-Tree索引
+<p>内存表也是支B-Tree索引的。在id列上创建一个B-Tree索引，SQL语句可以这么写：
+ <pre>
+alter table t1 add index a_btree_index using btree (id); </pre>
+
+<img src="https://static001.geekbang.org/resource/image/17/e3/1788deca56cb83c114d8353c92e3bde3.jpg">
+<p> 执行select * from t1 where id<5的时候，优化器会选择B-Tree索引，所以返回结果是0到4。 使用force index强行使用主键id这个索引，id=0这一行就在结果集的最末尾了
+
+#### Memory 的问题
+<p>1 内存表的锁
+<p> 只有表锁 表锁对并发访问的支持不够好。所以，内存表的锁粒度问题，决定了它在处理并发事务的时候，性能也不会太好
+
+<p>2 数据持久性问题
+<p> 内存表的数据 crash 会丢掉数据
+
+<p>在数据量可控，不会耗费过多内存的情况下，你可以考虑使用内存表。
+<li>   内存临时表刚好可以无视内存表的两个不足，主要是下面的三个原因：
+<li>   临时表不会被其他线程访问，没有并发性的问题；
+<li>   临时表重启后也是需要删除的，清空数据这个问题不存在；
+<li>   备库的临时表也不会影响主库的用户线程。
+
+### 39 | 自增主键为什么不是连续的？
+
+#### 自增值保存
+<p>表的结构定义存放在后缀名为.frm的文件中，但是并不会保存自增值。
+
+<p>不同的引擎对于自增值的保存策略不同。
+
+<li>MyISAM引擎的自增值保存在数据文件中。
+<li>InnoDB引擎的自增值，其实是保存在了内存里，并且到了MySQL 8.0版本后，才有了“自增值持久化”的能力，也就是才实现了“如果发生重启，表的自增值可以恢复为MySQL重启前的值”，具体情况是：
+<li>在MySQL 5.7及之前的版本，自增值保存在内存里，并没有持久化。每次重启后，第一次打开表的时候，都会去找自增值的最大值max(id)，然后将max(id)+1作为这个表当前的自增值。﻿
+<ul>举例来说，如果一个表当前数据行里最大的id是10，AUTO_INCREMENT=11。这时候，我们删除id=10的行，AUTO_INCREMENT还是11。但如果马上重启实例，重启后这个表的AUTO_INCREMENT就会变成10。﻿
+<li>也就是说，MySQL重启可能会修改一个表的AUTO_INCREMENT的值。
+<li>在MySQL 8.0版本，将自增值的变更记录在了redo log中，重启的时候依靠redo log恢复重启之前的值。
+
+#### 自增值修改机制
+<p>如果字段id被定义为AUTO_INCREMENT，在插入一行数据的时候，自增值的行为如下：
+
+<p>如果插入数据时id字段指定为0、null 或未指定值，那么就把这个表当前的 AUTO_INCREMENT值填到自增字段；
+
+<p>如果插入数据时id字段指定了具体的值，就直接使用语句里指定的值。
+
+<p>根据要插入的值和当前自增值的大小关系，自增值的变更结果也会有所不同。假设，某次要插入的值是X，当前的自增值是Y。
+
+<li>如果X<Y，那么这个表的自增值不变；
+
+<li>如果X≥Y，就需要把当前自增值修改为新的自增值。
+
+<p>新的自增值生成算法是：从auto_increment_offset开始，以auto_increment_increment为步长，持续叠加，直到找到第一个大于X的值，作为新的自增值。
+
+<p>其中，auto_increment_offset 和 auto_increment_increment是两个系统参数，分别用来表示自增的初始值和步长，默认值都是1。
+
+<p>ps：在一些场景下，使用的就不全是默认值。比如，双M的主备结构里要求双写的时候，我们就可能会设置成auto_increment_increment=2，让一个库的自增id都是奇数，另一个库的自增id都是偶数，避免两个库生成的主键发生冲突
+
+####  不连续的情况
+<p>唯一键冲突是导致自增主键id不连续的第一种原因。
+<p> 同样地，事务回滚也会产生类似的现象，这就是第二种原因
+<p> MySQL 5.1.22版本引入了一个新策略，新增参数innodb_autoinc_lock_mode，默认值是1。
+    
+<p> 这个参数的值被设置为0时，表示采用之前MySQL 5.0版本的策略，即语句执行结束后才释放锁；
+ <p>   这个参数的值被设置为1时：
+<p>    普通insert语句，自增锁在申请之后就马上释放；
+<p>    类似insert … select这样的批量插入数据的语句，自增锁还是要等语句结束后才被释放；
+<p>    这个参数的值被设置为2时，所有的申请自增主键的动作都是申请后就释放锁
+
+<p>在 binlog_format=statement  中  如果多个事物操作自增值 ,很有可能不连续,从库拿到日志执行就会出错( 事物B 不连续是因为A占用了一个 如果B的日志先写 B的自增值就和主库的不一样 执行不出来)
+<p>解决这个问题，有两种思路：
+
+<li>一种思路是，让原库的批量插入数据语句，固定生成连续的id值。所以，自增锁直到语句执行结束才释放，就是为了达到这个目的。
+
+<li>另一种思路是，在binlog里面把插入数据的操作都如实记录进来，到备库执行的时候，不再依赖于自增主键去生成。这种情况，其实就是innodb_autoinc_lock_mode设置为2，同时binlog_format设置为row。
+
+<p>尤其是有insert … select这种批量插入数据的场景时，从并发插入数据性能的角度考虑，我建议你这样设置：innodb_autoinc_lock_mode=2 ，并且 binlog_format=row.这样做，既能提升并发性，又不会出现数据一致性问题。
+   
+<p>   需要注意的是，我这里说的批量插入数据，包含的语句类型是insert … select、replace … select和load data语句。
+
+
+### 40 | insert语句的锁为什么这么多？
+<p>几种特殊情况下的insert语句。
+
+<li>insert … select 是很常见的在两个表之间拷贝数据的方法。你需要注意，在可重复读隔离级别下，这个语句会给select的表里扫描到的记录和间隙加读锁。
+<li>而如果insert和select的对象是同一个表，则有可能会造成循环写入。这种情况下，我们需要引入用户临时表来做优化。
+<li>insert 语句如果出现唯一键冲突，会在冲突的唯一值上加共享的next-key lock(S锁)。因此，碰到由于唯一键约束导致报错后，要尽快提交或回滚事务，避免加锁时间过长。
+
+<p>insert into … on duplicate key update
+<p>   上面这个例子是主键冲突后直接报错，如果是改写成
+ <pre>  
+   insert into t values(11,10,10) on duplicate key update d=100;  </pre>
+<p>   的话，就会给索引c上(5,10] 加一个排他的next-key lock（写锁）。
+<p>   insert into … on duplicate key update 这个语义的逻辑是，插入一行数据，如果碰到唯一键约束，就执行后面的更新语句。
+<p>   注意，如果有多个列违反了唯一性约束，就会按照索引的顺序，修改跟第一个索引冲突的行。
+
+
+###  41 | 怎么最快地复制一张表？
+
+<p>三种将一个表的数据导入到另外一个表中的方法。
+
+<p>我们来对比一下这三种方法的优缺点。
+
+<li>用mysqldump生成包含INSERT语句文件的方法，可以在where参数增加过滤条件，来实现只导出部分数据。这个方式的不足之一是，不能使用join这种比较复杂的where条件写法。
+
+<li>用select … into outfile的方法是最灵活的，支持所有的SQL写法。但，这个方法的缺点之一就是，每次只能导出一张表的数据，而且表结构也需要另外的语句单独备份。
+
+<li>物理拷贝的方式速度最快，尤其对于大表拷贝来说是最快的方法。如果出现误删表的情况，用备份恢复出误删之前的临时库，然后再把临时库中的表拷贝到生产库上，是恢复数据最快的方法。但是，这种方法的使用也有一定的局限性：
+
+<ul>必须是全表拷贝，不能只拷贝部分数据；
+<li>需要到服务器上拷贝数据，在用户无法登录数据库主机的场景下无法使用；
+<li>由于是通过拷贝物理文件实现的，源表和目标表都是使用InnoDB引擎时才能使用。
+ </li>
+
+<p>后两种方式都是逻辑备份方式，是可以跨引擎使用的。
+
+### 42 | grant之后要跟着flush privileges吗？
+<p> grant语句是用来给用户赋权的  flush privileges 是刷新内存的
+<p>创建一个用户：
+<pre>   
+   create user 'ua'@'%' identified by 'pa'; </pre>
+<p>这条命令做了两个动作：
+   
+<li>   磁盘上，往mysql.user表里插入一行，由于没有指定权限，所以这行数据上所有表示权限的字段的值都是N；
+   
+<li>  内存里，往数组acl_users里插入一个acl_user对象，这个对象的access字段值为0。
+
+<p>全局权限
+<pre>grant all privileges on *.* to 'ua'@'%' with grant option;</pre>
+<p>这个grant命令做了两个动作：
+
+<li>磁盘上，将mysql.user表里，用户’ua’@’%'这一行的所有表示权限的字段的值都修改为‘Y’；
+
+<li>内存里，从数组acl_users中找到这个用户对应的对象，将access值（权限位）修改为二进制的“全1”。
+
+<p>db权限
+<pre> grant all privileges on db1.* to 'ua'@'%' with grant option;   </pre>
+<p>如下两个动作：
+
+<li>磁盘上，往mysql.db表中插入了一行记录，所有权限位字段设置为“Y”；
+
+<li>内存里，增加一个对象到数组acl_dbs中，这个对象的权限位为“全1”
+
+<p> 表权限和列权限
+<pre>create table db1.t1(id int, a int);
+grant all privileges on db1.t1 to 'ua'@'%' with grant option;
+GRANT SELECT(id), INSERT (id,a) ON mydb.mytbl TO 'ua'@'%' with grant option;</pre>
+
+<p> 正常情况下，grant命令之后，没有必要跟着执行flush privileges命令。
+<p>flush privileges语句本身会用数据表的数据重建一份内存权限数据，所以在权限数据可能存在不一致的情况下再使用。而这种不一致往往是由于直接用DML语句操作系统权限表导致的，所以我们尽量不要使用这类语句
+
+<p>使用grant语句赋权时，你可能还会看到这样的写法：
+
+<pre>grant super on *.* to 'ua'@'%' identified by 'pa';</pre>
+<p>这条命令加了identified by ‘密码’， 语句的逻辑里面除了赋权外，还包含了：
+<p>如果用户’ua’@’%'不存在，就创建这个用户，密码是pa；
+<p>如果用户ua已经存在，就将密码修改成pa。
+<p>这也是一种不建议的写法，因为这种写法很容易就会不慎把密码给改了。
+
+### 43 | 要不要使用分区表？
+<p>这个表包含了一个.frm文件和4个.ibd文件，每个分区对应一个.ibd文件。也就是说：
+   
+<li>   对于引擎层来说，这是4个表；
+<li>   对于Server层来说，这是1个表。
+<p> 意思就是 引擎层的范围锁 并不会跨分区表去锁住其他表的数据 而MDL会锁住全部
+<p>小结：
+   
+<li>   MySQL在第一次打开分区表的时候，需要访问所有的分区；
+   
+<li>   在server层，认为这是同一张表，因此所有分区共用同一个MDL锁；
+   
+<li>   在引擎层，认为这是不同的表，因此MDL锁之后的执行过程，会根据分区表规则，只访问必要的分区。
+
+<p> 实际使用时，分区表跟用户分表比起来，有两个绕不开的问题：一个是第一次访问的时候需要访问所有分区，另一个是共用MDL锁。
+
+<h3><a href="https://www.cnblogs.com/gaosf/p/11189119.html">44 | 答疑文章（三）：说一说这些好问题</a>
+
+###  45 | 自增id用完怎么办？
+<p> 表定义自增值id
+<p> 无符号整型(unsigned int)是4个字节，上限就是232-1，应该创建成8个字节的bigint unsigned。
+
+<p>InnoDB系统自增row_id
+<p>如果你创建的InnoDB表没有指定主键，那么InnoDB会给你创建一个不可见的，长度为6个字节的row_id
+<p>248-1这个值本身已经很大了，但是如果一个MySQL实例跑得足够久的话，还是可能达到这个上限的。在InnoDB逻辑里，申请到row_id=N后，就将这行数据写入表中；如果表中已经存在row_id=N的行，新写入的行就会覆盖原有的行
+
+<p> Xid
+<p>MySQL内部维护了一个全局变量global_query_id，每次执行语句的时候将它赋值给Query_id，然后给这个变量加1。如果当前语句是这个事务执行的第一条语句，那么MySQL还会同时把Query_id赋值给这个事务的Xid。
+
+<p>而global_query_id是一个纯内存变量，重启之后就清零了。所以你就知道了，在同一个数据库实例中，不同事务的Xid也是有可能相同的。
+
+<p>但是MySQL重启之后会重新生成新的binlog文件，这就保证了，同一个binlog文件里，Xid一定是惟一的。
+
+<p> Innodb trx_id
+<p>Xid和InnoDB的trx_id是两个容易混淆的概念。
+   
+<p> Xid是由server层维护的。InnoDB内部使用Xid，就是为了能够在InnoDB事务和server之间做关联。但是，InnoDB自己的trx_id，是另外维护的。
+
+
+<p> thread_id
+<p>线程id（thread_id）。其实，线程id才是MySQL中最常见的一种自增id。平时我们在查各种现场的时候，show processlist里面的第一列，就是thread_id。
+
+<p>thread_id的逻辑很好理解：系统保存了一个全局变量thread_id_counter，每新建一个连接，就将thread_id_counter赋值给这个新连接的线程变量。
+
+<p>  thread_id_counter定义的大小是4个字节，因此达到232-1后，它就会重置为0，然后继续增加。但是，你不会在show processlist里看到两个相同的thread_id
+   
+   
+    
