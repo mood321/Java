@@ -67,4 +67,7 @@
         -  sql
             - [mysql45讲](https://github.com/mood321/JavaDemo/blob/master/src/main/resources/note/sql/sql45讲.md)
                               
+        -  中间件
+            - [消息队列](https://github.com/mood321/JavaDemo/blob/master/src/main/resources/note/中间件/消息中间件.md)
+                              
    
