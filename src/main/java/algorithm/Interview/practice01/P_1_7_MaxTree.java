@@ -8,7 +8,7 @@ import java.util.Stack;
  * @date 2020/1/2 22:07
  * @email 371428187@qq.com
  */
-public class P_0_7_MaxTree {
+public class P_1_7_MaxTree {
 
     public static   class Node{
         public int value;
