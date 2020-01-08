@@ -81,6 +81,14 @@ public class AllLessNumSumArray {
                 // 还是小于等于 num  R向后推
                 R++;
             }
+            if(L== min.peekFirst()){
+                min.pollFirst();
+
+            }
+            if(L== max.peekFirst()){
+                max.pollFirst();
+
+            }
             res += R - L; // 加上 这时 以L 为起点满足条件的个数
             // 这时 L 向后推
             //如果在数组 L到R 范围的子数组 满足条件  L，R之间的任何一个子数组满足条件
