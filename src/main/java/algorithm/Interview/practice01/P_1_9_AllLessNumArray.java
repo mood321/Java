@@ -41,6 +41,11 @@ public class P_1_9_AllLessNumArray {
 
                 R++;        // 走到这 最大最小相减还满足num 有三种各种可能  1 是比原来最小更小 后推 2 是比原来最大还大 后推 3 中间数 后推
             }
+
+
+            if (max.peekFirst() !=min.peekFirst() ) {      // 去掉一些 单个数小于num 的情况
+                res += R - L-1; // 加上 这时 以L 为起点满足条件的个数
+            }
               // 这儿一定要处理过期值
             if(L== min.peekFirst()){
                 min.pollFirst();
@@ -51,9 +56,7 @@ public class P_1_9_AllLessNumArray {
 
             }
 
-            //  这是求出了 以L 为开始元素  能有多少个满足的子数组
-            System.out.println("R>>>  "+ R +"  L>>  "+ L);
-            res += R-L;   // R 和L 在一起 会处理
+          
             L++;
             
         }
@@ -62,7 +65,7 @@ public class P_1_9_AllLessNumArray {
     }
 
     public static void main(String[] args) {
-        int[] ints = {1,2,3,4};
-        System.out.println(getNum(ints,1));
+        int[] ints = {1,52,3,2,1};
+        System.out.println(getNum(ints,2));
     }
 }

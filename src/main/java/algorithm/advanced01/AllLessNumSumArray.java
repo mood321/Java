@@ -22,13 +22,11 @@ public class AllLessNumSumArray {
         int res = 0;
         for (int i = 0; i < arr.length; i++) {
             for (int j = i; j < arr.length; j++) {
+
                if(isValid(arr, i, j, num))  {
-                   if(j== arr.length){
-                       System.out.println(1);
-                   }
+              
                    res++;
                }
-
             }
         }
         return res;
@@ -36,12 +34,12 @@ public class AllLessNumSumArray {
 
     // 判断子数组 是否是有效的
     private static boolean isValid(int[] arr, int i, int j, int num) {
-        if(i==j){
+        if(i==j ){
             return false;
         }
         int max = Integer.MIN_VALUE;
         int min = Integer.MAX_VALUE;
-        for (int k = i; k < j; k++) {
+        for (int k = i; k <= j; k++) {
             max = Math.max(max, arr[k]);
             min = Math.min(min, arr[k]);
         }
@@ -81,6 +79,11 @@ public class AllLessNumSumArray {
                 // 还是小于等于 num  R向后推
                 R++;
             }
+
+
+            if (max.peekFirst() !=min.peekFirst() ) {
+                res += R - L-1; // 加上 这时 以L 为起点满足条件的个数
+            }
             if(L== min.peekFirst()){
                 min.pollFirst();
 
@@ -89,7 +92,6 @@ public class AllLessNumSumArray {
                 max.pollFirst();
 
             }
-            res += R - L; // 加上 这时 以L 为起点满足条件的个数
             // 这时 L 向后推
             //如果在数组 L到R 范围的子数组 满足条件  L，R之间的任何一个子数组满足条件
             // 因为上面的思路 所以 R可以补回退  只判断 R是否向后推
@@ -100,8 +102,8 @@ public class AllLessNumSumArray {
     }
 
     public static void main(String[] args) {
-        int[] ints = {1,2,3,4,5};
-        System.out.println(getNum(ints,3));
-        System.out.println(getNum2(ints,3));
+        int[] ints = {1,52,3,2,1};
+        System.out.println(getNum(ints,2));
+        System.out.println(getNum2(ints,2));
     }
 }
