@@ -7,7 +7,7 @@ import java.util.Stack;
  * @date 2020/3/3 23:04
  * @email 371428187@qq.com
  */
-public class P_2_IsPalindRom {
+public class P_2_6_IsPalindRom {
     public static class Node {
         Integer data;
         Node next;
@@ -51,6 +51,13 @@ public class P_2_IsPalindRom {
 
     /**
      * 进阶思路
+     *        1   3   1
+     *
+     *        1   3   null
+     *        3   1   null
+     *
+     *        1   3   null
+     *        3   1
      *
      * @param head
      * @return
@@ -87,11 +94,12 @@ public class P_2_IsPalindRom {
               cur=cur.next;
               n2=n2.next;
         }
+        printLinkedList(n2);
         // 恢复链表
         cur=n3.next;        //
         n3.next=null;
 
-        while(cur !=null){   // 原头还是n3 新头n3 中转cur
+        while(cur !=null){   // 原头还是n2 新头n3 中转cur
             n2=cur.next;
             cur.next=n3;
             n3=cur;
@@ -149,7 +157,7 @@ public class P_2_IsPalindRom {
         System.out.println(isPalindrome3(head) + " | ");
         printLinkedList(head);
         System.out.println("=========================");
-
+/*
         head = new Node(1);
         head.next = new Node(2);
         head.next.next = new Node(3);
@@ -179,7 +187,7 @@ public class P_2_IsPalindRom {
         System.out.print(isPalindrome2(head) + " | ");
         System.out.println(isPalindrome3(head) + " | ");
         printLinkedList(head);
-        System.out.println("=========================");
+        System.out.println("=========================");*/
 
     }
 
