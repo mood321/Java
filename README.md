@@ -65,10 +65,10 @@
             <li> <p> <a href="https://github.com/mood321/JavaDemo/blob/master/src/main/resources/note/Algorithm/程序员面试.md">程序员面试</a> 
             <li> <p> <a href="https://github.com/mood321/JavaDemo/blob/master/src/main/resources/note/Algorithm/LeetCode.md">LeetCode</a> 
                             
-        -  sql
-            - [mysql45讲](https://github.com/mood321/JavaDemo/blob/master/src/main/resources/note/sql/sql45讲.md)
+   + sql
+     - [mysql45讲](https://github.com/mood321/JavaDemo/blob/master/src/main/resources/note/sql/sql45讲.md)
                               
-        -  中间件
-            - [消息队列](https://github.com/mood321/JavaDemo/blob/master/src/main/resources/note/中间件/消息中间件.md)
+   + 中间件
+      - [消息队列](https://github.com/mood321/JavaDemo/blob/master/src/main/resources/note/中间件/消息中间件.md)
                               
    
