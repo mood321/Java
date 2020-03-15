@@ -70,5 +70,9 @@
                               
    + 中间件
       - [消息队列](https://github.com/mood321/JavaDemo/blob/master/src/main/resources/note/中间件/消息中间件.md)
+   
+   
+   + linux
+      - [趣谈Linux操作系统](https://github.com/mood321/JavaDemo/blob/master/src/main/resources/note/linux/趣谈Linux操作系统.md)
                               
    

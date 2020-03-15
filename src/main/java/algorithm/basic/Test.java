@@ -62,11 +62,11 @@ public class Test {
         }*/
 
 echo1();
-        System.out.println(3|2);
-        System.out.println(4&3);
+       /* System.out.println(3|2);
+        System.out.println(4&3);*/
     }
 
-    private static void echo1() {
+    private static synchronized  void echo1() {
         for (int s=9;s>0;){
             er(s);
             s-=3;
