@@ -127,4 +127,51 @@ apt-get install zip unzip
 <img src="https://static001.geekbang.org/resource/image/0a/6b/0a29c1d3e1a53b2523d2dcab3a59886b.jpeg" >
 
 
+<h3> 内核初始化
 
+<img src="https://static001.geekbang.org/resource/image/cd/01/cdfc33db2fe1e07b6acf8faa3959cb01.jpeg" >
+
+<h5>首先是项目管理部门
+<p>在操作系统里面，先要有个创始进程，有一行指令 set_task_stack_end_magic(&init_task)。这里面有一个参数 init_task，它的定义是 struct task_struct init_task = INIT_TASK(init_task)。它是系统创建的第一个进程，我们称为0 号进程。这是唯一一个没有通过 fork 或者 kernel_thread 产生的进程，是进程列表的第一个。
+<p> 所谓进程列表（Procese List），就是咱们前面说的项目管理工具，里面列着我们所有接的项目。
+
+<h5> 办事大厅
+<p>有了办事大厅，我们就可以响应客户的需求。
+<p>  这里面对应的函数是 trap_init()，里面设置了很多中断门（Interrupt Gate），用于处理各种中断。其中有一个 set_system_intr_gate(IA32_SYSCALL_VECTOR, entry_INT80_32)，这是系统调用的中断门。系统调用也是通过发送中断的方式进行的。当然，64 位的有另外的系统调用方法，这一点我们放到后面的系统调用章节详细谈
+
+<h5> 会议室管理系统
+<p>mm_init() 就是用来初始化内存管理模块。
+<p>项目需要项目管理进行调度，需要执行一定的调度策略。sched_init() 就是用于初始化调度模块。
+<p>vfs_caches_init() 会用来初始化基于内存的文件系统 rootfs。在这个函数里面，会调用 mnt_init()->init_rootfs()。这里面有一行代码，register_filesystem(&rootfs_fs_type)。在 VFS 虚拟文件系统里面注册了一种类型，我们定义为 struct file_system_type rootfs_fs_type
+<p>最后，start_kernel() 调用的是 rest_init()，用来做其他方面的初始化，这里面做了好多的工作
+
+<h4>初始化 1 号进程
+<p>rest_init 的第一大工作是，用 kernel_thread(kernel_init, NULL, CLONE_FS) 创建第二个进程，这个是1 号进程。
+<p> 进程多起来 就需要权限分层  权限机制，把区域分成了四个 Ring，越往里权限越高，越往外权限越低。
+<img src="https://static001.geekbang.org/resource/image/2b/42/2b53b470673cde8f9d8e2573f7d07242.jpg">
+
+<p>操作系统很好地利用了这个机制，将能够访问关键资源的代码放在 Ring0，我们称为内核态（Kernel Mode）；将普通的程序代码放在 Ring3，我们称为用户态（User Mode）
+
+<p> 用户态的进程调用系统调用 进程是需要暂停的  流程:用户态 - 系统调用 - 保存寄存器 - 内核态执行系统调用 - 恢复寄存器 - 返回用户态，然后接着运行
+<img src="https://static001.geekbang.org/resource/image/d2/14/d2fce8af88dd278670395ce1ca6d4d14.jpg" >
+
+<p> 从内核态到用户态
+<p> 1号进程完成了 内核态的init 
+<h5> ramdisk 
+<p>init 终于从内核到用户态了。一开始到用户态的是 ramdisk 的 init，后来会启动真正根文件系统上的 init，成为所有用户态进程的祖先
+<p>一个基于内存的文件系统。内存访问是不需要驱动的，这个就是 ramdisk。这个时候，ramdisk 是根文件系统。
+<p> 然后，我们开始运行 ramdisk 上的 /init。等它运行完了就已经在用户态了。/init 这个程序会先根据存储系统的类型加载驱动，有了驱动就可以设置真正的根文件系统了。有了真正的根文件系统，ramdisk 上的 /init 会启动文件系统上的 init
+<p>rest_init 的第一个大事情才完成。我们仅仅形成了用户态所有进程的祖先。
+
+<h4> 创建 2 号进程
+<p>rest_init 第二大事情就是第三个进程，就是 2 号进程。
+<p>kernel_thread(kthreadd, NULL, CLONE_FS | CLONE_FILES) 又一次使用 kernel_thread 函数创建进程。这里需要指出一点，函数名 thread 可以翻译成“线程”，这也是操作系统很重要的一个概念。它和进程有什么区别呢？为什么这里创建的是进程，函数名却是线程呢？
+<p>   从用户态来看，创建进程其实就是立项，也就是启动一个项目。这个项目包含很多资源，例如会议室、资料库等。这些东西都属于这个项目，但是这个项目需要人去执行。有多个人并行执行不同的部分，这就叫多线程（Multithreading）。如果只有一个人，那它就是这个项目的主线程。
+<p>   但是从内核态来看，无论是进程，还是线程，我们都可以统称为任务（Task），都使用相同的数据结构
+
+
+<h3> 系统调用
+
+<img  src="https://static001.geekbang.org/resource/image/86/a5/868db3f559ad08659ddc74db07a9a0a5.jpg" >
+
+<p> glibc 对系统调用的封装
