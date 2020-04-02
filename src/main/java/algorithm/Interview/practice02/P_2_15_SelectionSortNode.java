@@ -44,6 +44,7 @@ public class P_2_15_SelectionSortNode {
 
       }
 
+
     private static Node getSmallPre(Node head) {
         Node smallPre=null;
         Node small= head;
@@ -61,6 +62,7 @@ public class P_2_15_SelectionSortNode {
         return smallPre;
     }
 
+    
     public static void main(String[] args) {
         Node node = new Node(1);
         Node node1 = new Node(3);
