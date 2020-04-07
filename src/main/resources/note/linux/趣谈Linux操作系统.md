@@ -127,7 +127,7 @@ apt-get install zip unzip
 <img src="https://static001.geekbang.org/resource/image/0a/6b/0a29c1d3e1a53b2523d2dcab3a59886b.jpeg" >
 
 
-<h3> 内核初始化
+### 内核初始化
 
 <img src="https://static001.geekbang.org/resource/image/cd/01/cdfc33db2fe1e07b6acf8faa3959cb01.jpeg" >
 
@@ -179,7 +179,7 @@ apt-get install zip unzip
 <img src="https://static001.geekbang.org/resource/image/86/a5/868db3f559ad08659ddc74db07a9a0a5.jpg" >
 
 
-<h3> 3   进程管理
+### 3   进程管理
 <p> 文件编译过程，生成 so 文件和可执行文件，放在硬盘上。下图左边的用户态的进程 A 执行 fork，创建进程 B，在进程 B 的处理逻辑中，执行 exec 系列系统调用。这个系统调用会通过 load_elf_binary 方法，将刚才生成的可执行文件，加载到进程 B 的内存中执行。
 <img src="https://static001.geekbang.org/resource/image/db/a9/dbd8785da6c3ce3fe1abb7bb5934b7a9.jpeg" >
 
@@ -229,7 +229,7 @@ apt-get install zip unzip
  <img src="https://static001.geekbang.org/resource/image/14/4b/14635b1613d04df9f217c3508ae8524b.jpeg" > 
  
  
- <h3> 4 内存管理
+### 4 内存管理
  
  <h4> 20  独享内存空间
 <p> 并且站在老板的角度，设计了虚拟地址空间应该存放的数据。
@@ -306,7 +306,7 @@ apt-get install zip unzip
 
 
 
-<h3> 5 文件系统
+### 5 文件系统
 <h4> 27  文件系统
 
 <p>通过下面这张图梳理一下。
@@ -349,11 +349,64 @@ apt-get install zip unzip
 
 
 
-<h4>
-<p> 在文件系统上，需要维护文件的严格的格式，要通过 mkfs.ext4 命令来格式化为严格的格式。
-<p>    每一个硬盘上保存的文件都要有一个索引，来维护这个文件上的数据块都保存在哪里。
-<p>    文件通过文件夹组织起来，可以方便用户使用。
-<p>    为了能够更快读取文件，内存里会分配一块空间作为缓存，让一些数据块放在缓存里面。
-<p>    在内核中，要有一整套的数据结构来表示打开的文件。
-<p>    在用户态，每个打开的文件都有一个文件描述符，可以通过各种文件相关的系统调用，操作这个文件描述符。
-<img src="https://static001.geekbang.org/resource/image/27/50/2788a6267f8361c9b6c338b06a1afc50.png" >
+
+<h4> 30  文件缓存
+<p> 读写调用过程。
+<p>在系统调用层我们需要仔细学习 read 和 write。在 VFS 层调用的是 vfs_read 和 vfs_write 并且调用 file_operation。在 ext4 层调用的是 ext4_file_read_iter 和 ext4_file_write_iter。
+<p>接下来就是分叉。你需要知道缓存 I/O 和直接 I/O。直接 I/O 读写的流程是一样的，调用 ext4_direct_IO，再往下就调用块设备层了。缓存 I/O 读写的流程不一样。对于读，从块设备读取到缓存中，然后从缓存中拷贝到用户态。对于写，从用户态拷贝到缓存，设置缓存页为脏，然后启动一个线程写入块设备。
+
+<img src="https://static001.geekbang.org/resource/image/0c/65/0c49a870b9e6441381fec8d9bf3dee65.png">
+
+
+### 输入输出系统
+
+<h4>    31  输入与输出
+
+<p>输入与输出设备的管理，内容比较多。输入输出设备就像管理代理商一样。因为代理商复杂多变，代理商管理也同样复杂多变，需要层层屏蔽差异化的部分，给上层提供标准化的部分，最终到用户态，给用户提供了基于文件系统的统一的接口。
+<img src="https://static001.geekbang.org/resource/image/80/7f/80e152fe768e3cb4c84be62ad8d6d07f.jpg" >
+
+<h4> 32  字符设备（上）
+<p>字符设备的打开、写入和 ioctl 等最常见的操作。一个字符设备要能够工作，需要三部分配合。
+<p>第一，有一个设备驱动程序的 ko 模块，里面有模块初始化函数、中断处理函数、设备操作函数。这里面封装了对于外部设备的操作。加载设备驱动程序模块的时候，模块初始化函数会被调用。在内核维护所有字符设备驱动的数据结构 cdev_map 里面注册，我们就可以很容易根据设备号，找到相应的设备驱动程序。
+<p>第二，在 /dev 目录下有一个文件表示这个设备，这个文件在特殊的 devtmpfs 文件系统上，因而也有相应的 dentry 和 inode。这里的 inode 是一个特殊的 inode，里面有设备号。通过它，我们可以在 cdev_map 中找到设备驱动程序，里面还有针对字符设备文件的默认操作 def_chr_fops。
+<p>第三，打开一个字符设备文件和打开一个普通的文件有类似的数据结构，有文件描述符、有 struct file、指向字符设备文件的 dentry 和 inode。字符设备文件的相关操作 file_operations 一开始指向 def_chr_fops，在调用 def_chr_fops 里面的 chrdev_open 函数的时候，修改为指向设备操作函数，从而读写一个字符设备文件就会直接变成读写外部设备了。
+
+<img  src="https://static001.geekbang.org/resource/image/fb/cd/fba61fe95e0d2746235b1070eb4c18cd.jpeg" >
+
+<h4> 33 | 字符设备（下）
+<p>中断的整个处理过程。中断是从外部设备发起的，会形成外部中断。外部中断会到达中断控制器，中断控制器会发送中断向量 Interrupt Vector 给 CPU。
+<p>对于每一个 CPU，都要求有一个 idt_table，里面存放了不同的中断向量的处理函数。中断向量表中已经填好了前 32 位，外加一位 32 位系统调用，其他的都是用于设备中断。
+<p>硬件中断的处理函数是 do_IRQ 进行统一处理，在这里会让中断向量，通过 vector_irq 映射为 irq_desc。
+<p>irq_desc 是一个用于描述用户注册的中断处理函数的结构，为了能够根据中断向量得到 irq_desc 结构，会把这些结构放在一个基数树里面，方便查找。
+<p>irq_desc 里面有一个成员是 irqaction，指向设备驱动程序里面注册的中断处理函数。
+<img src="https://static001.geekbang.org/resource/image/26/8f/26bde4fa2279f66098856c5b2b6d308f.png" >
+
+
+<h4> 34 | 块设备（上）
+<p>块设备比字符设备复杂多了，涉及三个文件系统，工作过程我用一张图总结了一下，下面带你总结一下。
+<p>所有的块设备被一个 map 结构管理从 dev_t 到 gendisk 的映射；
+<p>所有的 block_device 表示的设备或者分区都在 bdev 文件系统的 inode 列表中；
+<p>mknod 创建出来的块设备文件在 devtemfs 文件系统里面，特殊 inode 里面有块设备号；
+<p>mount 一个块设备上的文件系统，调用这个文件系统的 mount 接口；
+<p>通过按照 /dev/xxx 在文件系统 devtmpfs 文件系统上搜索到特殊 inode，得到块设备号；
+<p>根据特殊 inode 里面的 dev_t 在 bdev 文件系统里面找到 inode；
+<p>根据 bdev 文件系统上的 inode 找到对应的 block_device，根据 dev_t 在 map 中找到 gendisk，将两者关联起来；
+<p>找到 block_device 后打开设备，调用和 block_device 关联的 gendisk 里面的 block_device_operations 打开设备；
+<p>创建被 mount 的文件系统的 super_block。
+
+<img src="https://static001.geekbang.org/resource/image/62/20/6290b73283063f99d6eb728c26339620.png" >
+
+<h4> 35 | 块设备（下）
+
+<p>对于 ext4 文件系统，最后调用的是 ext4_file_write_iter，它将 I/O 的调用分成两种情况：
+<p>第一是直接 I/O。最终我们调用的是 generic_file_direct_write，这里调用的是 mapping->a_ops->direct_IO，实际调用的是 ext4_direct_IO，往设备层写入数据。
+<p>第二种是缓存 I/O。最终我们会将数据从应用拷贝到内存缓存中，但是这个时候，并不执行真正的 I/O 操作。它们只将整个页或其中部分标记为脏。写操作由一个 timer 触发，那个时候，才调用 wb_workfn 往硬盘写入页面。
+<p>接下来的调用链为：wb_workfn->wb_do_writeback->wb_writeback->writeback_sb_inodes->__writeback_single_inode->do_writepages。在 do_writepages 中，我们要调用 mapping->a_ops->writepages，但实际调用的是 ext4_writepages，往设备层写入数据。
+
+<p>块设备 I/O 请求送达到外部设备。
+<p>对于块设备的 I/O 操作分为两种，一种是直接 I/O，另一种是缓存 I/O。无论是哪种 I/O，最终都会调用 submit_bio 提交块设备 I/O 请求。
+<p>对于每一种块设备，都有一个 gendisk 表示这个设备，它有一个请求队列，这个队列是一系列的 request 对象。每个 request 对象里面包含多个 BIO 对象，指向 page cache。所谓的写入块设备，I/O 就是将 page cache 里面的数据写入硬盘。
+<p>对于请求队列来讲，还有两个函数，一个函数叫 make_request_fn 函数，用于将请求放入队列。submit_bio 会调用 generic_make_request，然后调用这个函数。
+<p>另一个函数往往在设备驱动程序里实现，我们叫 request_fn 函数，它用于从队列里面取出请求来，写入外部设备。
+
+<img  src="https://static001.geekbang.org/resource/image/c9/3c/c9f6a08075ba4eae3314523fa258363c.png" >
