@@ -410,3 +410,111 @@ apt-get install zip unzip
 <p>另一个函数往往在设备驱动程序里实现，我们叫 request_fn 函数，它用于从队列里面取出请求来，写入外部设备。
 
 <img  src="https://static001.geekbang.org/resource/image/c9/3c/c9f6a08075ba4eae3314523fa258363c.png" >
+
+
+### 第七部分 进程间通信
+
+<h4> 36丨进程间通信
+<li>类似瀑布开发模式的管道
+<li>类似邮件模式的消息队列
+<li>类似会议室联合开发的共享内存加信号量
+<li>类似应急预案的信号
+<li>当你自己使用的时候，可以根据不同的通信需要，选择不同的模式。
+
+<p>管道，请你记住这是命令行中常用的模式，面试问到的话，不要忘了。
+<li>消息队列其实很少使用，因为有太多的用户级别的消息队列，功能更强大。
+<li>共享内存加信号量是常用的模式。这个需要牢记，常见到一些知名的以 C 语言开发的开源软件都会用到它。
+<li>信号更加常用，机制也比较复杂
+
+
+<h4> 37丨信号（上）
+<p>通过 API 注册一个信号处理函数，整个过程如下图所示。
+<li>在用户程序里面，有两个函数可以调用，一个是 signal，一个是 sigaction，推荐使用 sigaction。
+<li>用户程序调用的是 Glibc 里面的函数，signal 调用的是 __sysv_signal，里面默认设置了一些参数，使得 signal 的功能受到了限制，sigaction 调用的是 __sigaction，参数用户可以任意设定。
+<li>无论是 __sysv_signal 还是 __sigaction，调用的都是统一的一个系统调用 rt_sigaction。
+<li>在内核中，rt_sigaction 调用的是 do_sigaction 设置信号处理函数。在每一个进程的 task_struct 里面，都有一个 sighand 指向 struct sighand_struct，里面是一个数组，下标是信号，里面的内容是信号处理函数。
+
+<img src="https://static001.geekbang.org/resource/image/7c/28/7cb86c73b9e73893e6b0e0433d476928.png" >
+
+<h4> 38 | 信号（下）
+<p>信号的发送与处理是一个复杂的过程，这里来总结一下。
+
+<li>假设我们有一个进程 A，main 函数里面调用系统调用进入内核。
+<li>按照系统调用的原理，会将用户态栈的信息保存在 pt_regs 里面，也即记住原来用户态是运行到了 line A 的地方。
+<li>在内核中执行系统调用读取数据。
+<li>当发现没有什么数据可读取的时候，只好进入睡眠状态，并且调用 schedule 让出 CPU，这是进程调度第一定律。
+<li>将进程状态设置为 TASK_INTERRUPTIBLE，可中断的睡眠状态，也即如果有信号来的话，是可以唤醒它的。
+<li>其他的进程或者 shell 发送一个信号，有四个函数可以调用 kill，tkill，tgkill，rt_sigqueueinfo
+<li>四个发送信号的函数，在内核中最终都是调用 do_send_sig_info
+<li>do_send_sig_info 调用 send_signal 给进程 A 发送一个信号，其实就是找到进程 A 的 task_struct，或者加入信号集合，为不可靠信号，或者加入信号链表，为可靠信号
+<li>do_send_sig_info 调用 signal_wake_up 唤醒进程 A。
+<li>进程 A 重新进入运行状态 TASK_RUNNING，根据进程调度第一定律，一定会接着 schedule 运行。
+<li>进程 A 被唤醒后，检查是否有信号到来，如果没有，重新循环到一开始，尝试再次读取数据，如果还是没有数据，再次进入 TASK_INTERRUPTIBLE，即可中断的睡眠状态。
+<li>当发现有信号到来的时候，就返回当前正在执行的系统调用，并返回一个错误表示系统调用被中断了。
+<li>系统调用返回的时候，会调用 exit_to_usermode_loop，这是一个处理信号的时机
+<li>调用 do_signal 开始处理信号
+<li>根据信号，得到信号处理函数 sa_handler，然后修改 pt_regs 中的用户态栈的信息，让 pt_regs 指向 sa_handler。同时修改用户态的栈，插入一个栈帧 sa_restorer，里面保存了原来的指向 line A 的 pt_regs，并且设置让 sa_handler 运行完毕后，跳到 sa_restorer 运行。
+<li>返回用户态，由于 pt_regs 已经设置为 sa_handler，则返回用户态执行 sa_handler。
+<li>sa_handler 执行完毕后，信号处理函数就执行完了，接着根据第 15 步对于用户态栈帧的修改，会跳到 sa_restorer 运行。
+<li>sa_restorer 会调用系统调用 rt_sigreturn 再次进入内核。
+<li>在内核中，rt_sigreturn 恢复原来的 pt_regs，重新指向 line A。
+<li>从 rt_sigreturn 返回用户态，还是调用 exit_to_usermode_loop。
+<li>这次因为 pt_regs 已经指向 line A 了，于是就到了进程 A 中，接着系统调用之后运行，当然这个系统调用返回的是它被中断了，没有执行完的错误。
+
+<img src="https://static001.geekbang.org/resource/image/3d/fb/3dcb3366b11a3594b00805896b7731fb.png">
+
+<h4> 39 | 管道
+<p>无论是匿名管道，还是命名管道，在内核都是一个文件。只要是文件就要有一个 inode。这里我们又用到了特殊 inode、字符设备、块设备，其实都是这种特殊的 inode。
+<p>在这种特殊的 inode 里面，file_operations 指向管道特殊的 pipefifo_fops，这个 inode 对应内存里面的缓存。
+<p>当我们用文件的 open 函数打开这个管道设备文件的时候，会调用 pipefifo_fops 里面的方法创建 struct file 结构，他的 inode 指向特殊的 inode，也对应内存里面的缓存，file_operations 也指向管道特殊的 pipefifo_fops。
+<p>写入一个 pipe 就是从 struct file 结构找到缓存写入，读取一个 pipe 就是从 struct file 结构找到缓存读出。
+
+<img src="https://static001.geekbang.org/resource/image/48/97/486e2bc73abbe91d7083bb1f4f678097.png">
+
+
+<h4>   40 | IPC（上）
+<p>共享内存和信号量的配合机制，如下图所示：
+
+<li>无论是共享内存还是信号量，创建与初始化都遵循同样流程，通过 ftok 得到 key，通过 xxxget 创建对象并生成 id；
+<li>生产者和消费者都通过 shmat 将共享内存映射到各自的内存空间，在不同的进程里面映射的位置不同；
+<li>为了访问共享内存，需要信号量进行保护，信号量需要通过 semctl 初始化为某个值；
+<li>接下来生产者和消费者要通过 semop(-1) 来竞争信号量，如果生产者抢到信号量则写入，然后通过 semop(+1) 释放信号量，如果消费者抢到信号量则读出，然后通过 semop(+1) 释放信号量；
+<li>共享内存使用完毕，可以通过 shmdt 来解除映射
+
+<img src="https://static001.geekbang.org/resource/image/46/0b/469552bffe601d594c432d4fad97490b.png" >
+
+<h4>  41丨IPC（中）
+
+<p>共享内存的创建和映射过程。
+
+<li>调用 shmget 创建共享内存。
+<li>先通过 ipc_findkey 在基数树中查找 key 对应的共享内存对象 shmid_kernel 是否已经被创建过，如果已经被创建，就会被查询出来，例如 producer 创建过，在 consumer 中就会查询出来。
+<li>如果共享内存没有被创建过，则调用 shm_ops 的 newseg 方法，创建一个共享内存对象 shmid_kernel。例如，在 producer 中就会新建。
+<li>在 shmem 文件系统里面创建一个文件，共享内存对象 shmid_kernel 指向这个文件，这个文件用 struct file 表示，我们姑且称它为 file1。
+<li>调用 shmat，将共享内存映射到虚拟地址空间。
+<li>shm_obtain_object_check 先从基数树里面找到 shmid_kernel 对象。
+<li>创建用于内存映射到文件的 file 和 shm_file_data，这里的 struct file 我们姑且称为 file2。
+<li>关联内存区域 vm_area_struct 和用于内存映射到文件的 file，也即 file2，调用 file2 的 mmap 函数。
+<li>file2 的 mmap 函数 shm_mmap，会调用 file1 的 mmap 函数 shmem_mmap，设置 shm_file_data 和 vm_area_struct 的 vm_ops。
+<li>内存映射完毕之后，其实并没有真的分配物理内存，当访问内存的时候，会触发缺页异常 do_page_fault。
+<li>vm_area_struct 的 vm_ops 的 shm_fault 会调用 shm_file_data 的 vm_ops 的 shmem_fault。
+<li>在 page cache 中找一个空闲页，或者创建一个空闲页。
+
+<img src="https://static001.geekbang.org/resource/image/20/51/20e8f4e69d47b7469f374bc9fbcf7251.png" >
+
+
+<h4> 42 | IPC（下）
+
+<p>信号量的机制也很复杂
+<li>调用 semget 创建信号量集合。
+<li>ipc_findkey 会在基数树中，根据 key 查找信号量集合 sem_array 对象。如果已经被创建，就会被查询出来。例如 producer 被创建过，在 consumer 中就会查询出来。
+<li>如果信号量集合没有被创建过，则调用 sem_ops 的 newary 方法，创建一个信号量集合对象 sem_array。例如，在 producer 中就会新建。
+<li>调用 semctl(SETALL) 初始化信号量。
+<li>sem_obtain_object_check 先从基数树里面找到 sem_array 对象。
+<li>根据用户指定的信号量数组，初始化信号量集合，也即初始化 sem_array 对象的 struct sem sems[] 成员。
+<li>调用 semop 操作信号量。
+<li>创建信号量操作结构 sem_queue，放入队列。
+<li>创建 undo 结构，放入链表。
+
+<img src="https://static001.geekbang.org/resource/image/60/7c/6028c83b0aa00e65916988911aa01b7c.png" >
+
