@@ -587,3 +587,145 @@ apt-get install zip unzip
 <li>有了 MAC 地址，就可以调用 dev_queue_xmit 发送二层网络包了，它会调用 __dev_xmit_skb 会将请求放入队列。
 <li>设备层：网络包的发送回触发一个软中断 NET_TX_SOFTIRQ 来处理队列中的数据。这个软中断的处理函数是 net_tx_action。
 <li>在软中断处理函数中，会将网络包从队列上拿下来，调用网络设备的传输函数 ixgb_xmit_frame，将网络包发的设备的队列上去。
+
+
+
+<h4> 47 | 接收网络包（上）
+<p>接收网络包的上半部分，分以下几个层次。
+
+<li>硬件网卡接收到网络包之后，通过 DMA 技术，将网络包放入 Ring Buffer。
+<li>硬件网卡通过中断通知 CPU 新的网络包的到来。
+<li>网卡驱动程序会注册中断处理函数 ixgb_intr。
+<li>中断处理函数处理完需要暂时屏蔽中断的核心流程之后，通过软中断 NET_RX_SOFTIRQ 触发接下来的处理过程。
+<li>NET_RX_SOFTIRQ 软中断处理函数 net_rx_action，net_rx_action 会调用 napi_poll，进而调用 ixgb_clean_rx_irq，从 Ring Buffer 中读取数据到内核 struct sk_buff。
+<li>调用 netif_receive_skb 进入内核网络协议栈，进行一些关于 VLAN 的二层逻辑处理后，调用 ip_rcv 进入三层 IP 层。
+<li>在 IP 层，会处理 iptables 规则，然后调用 ip_local_deliver，交给更上层 TCP 层。
+<li>在 TCP 层调用 tcp_v4_rcv。
+
+<img src="https://static001.geekbang.org/resource/image/a5/37/a51af8ada1135101e252271626669337.png" >
+
+<h4> 48 | 接收网络包（下）
+
+<p>接收网络包，我们来从头串一下，整个过程可以分成以下几个层次。
+
+<li>硬件网卡接收到网络包之后，通过 DMA 技术，将网络包放入 Ring Buffer；
+<li>硬件网卡通过中断通知 CPU 新的网络包的到来；
+<li>网卡驱动程序会注册中断处理函数 ixgb_intr；
+<li>中断处理函数处理完需要暂时屏蔽中断的核心流程之后，通过软中断 NET_RX_SOFTIRQ 触发接下来的处理过程；
+<li>NET_RX_SOFTIRQ 软中断处理函数 net_rx_action，net_rx_action 会调用 napi_poll，进而调用 ixgb_clean_rx_irq，从 Ring Buffer 中读取数据到内核 struct sk_buff；
+<li>调用 netif_receive_skb 进入内核网络协议栈，进行一些关于 VLAN 的二层逻辑处理后，调用 ip_rcv 进入三层 IP 层；
+<li>在 IP 层，会处理 iptables 规则，然后调用 ip_local_deliver 交给更上层 TCP 层；
+<li>在 TCP 层调用 tcp_v4_rcv，这里面有三个队列需要处理，如果当前的 Socket 不是正在被读；取，则放入 backlog 队列，如果正在被读取，不需要很实时的话，则放入 prequeue 队列，其他情况调用 tcp_v4_do_rcv；
+<li>在 tcp_v4_do_rcv 中，如果是处于 TCP_ESTABLISHED 状态，调用 tcp_rcv_established，其他的状态，调用 tcp_rcv_state_process；
+<li>在 tcp_rcv_established 中，调用 tcp_data_queue，如果序列号能够接的上，则放入 sk_receive_queue 队列；如果序列号接不上，则暂时放入 out_of_order_queue 队列，等序列号能够接上的时候，再放入 sk_receive_queue 队列。
+<p>至此内核接收网络包的过程到此结束，接下来就是用户态读取网络包的过程，这个过程分成几个层次。
+
+<li>VFS 层：read 系统调用找到 struct file，根据里面的 file_operations 的定义，调用 sock_read_iter 函数。sock_read_iter 函数调用 sock_recvmsg 函数。
+<li>Socket 层：从 struct file 里面的 private_data 得到 struct socket，根据里面 ops 的定义，调用 inet_recvmsg 函数。
+<li>Sock 层：从 struct socket 里面的 sk 得到 struct sock，根据里面 sk_prot 的定义，调用 tcp_recvmsg 函数。
+<li>TCP 层：tcp_recvmsg 函数会依次读取 receive_queue 队列、prequeue 队列和 backlog 队列。
+
+<img src="https://static001.geekbang.org/resource/image/20/52/20df32a842495d0f629ca5da53e47152.png" >
+
+### 第九部分 虚拟化
+
+<h4> 49丨虚拟机
+
+<p>需要记住下面的这些知识点：
+
+<li>虚拟化的本质是用 qemu 的软件模拟硬件，但是模拟方式比较慢，需要加速；
+<li>虚拟化主要模拟 CPU、内存、网络、存储，分别有不同的加速办法；
+<li>CPU 和内存主要使用硬件辅助虚拟化进行加速，需要配备特殊的硬件才能工作；
+<li>网络和存储主要使用特殊的半虚拟化驱动加速，需要加载特殊的驱动程序。
+
+
+<p> 50 | 计算虚拟化之CPU（上）
+
+<p> 虚拟机对于设备的模拟是一件非常复杂的事情，需要用复杂的参数模拟各种各样的设备。为了能够适配这些设备，qemu 定义了自己的模块管理机制，只有了解了这种机制，后面看每一种设备的虚拟化的时候，才有一个整体的思路。
+<p>     这里的 MachineClass 是我们遇到的第一个，我们需要掌握它里面各种定义之间的关系。
+
+<img src="https://static001.geekbang.org/resource/image/07/30/078dc698ef1b3df93ee9569e55ea2f30.png">
+
+<p>每个模块都会有一个定义 TypeInfo，会通过 type_init 变为全局的 TypeImpl。TypeInfo 以及生成的 TypeImpl 有以下成员：
+
+<li>name 表示当前类型的名称
+<li>parent 表示父类的名称
+<li>class_init 用于将 TypeImpl 初始化为 MachineClass
+<li>instance_init 用于将 MachineClass 初始化为 MachineState
+
+<h4> 51丨计算虚拟化之CPU（下）
+
+<p> 总结了一下。
+
+<img src="https://static001.geekbang.org/resource/image/c4/67/c43639f7024848aa3e828bcfc10ca467.png" >
+
+<li>首先，我们要定义 CPU 这种类型的 TypeInfo 和 TypeImpl、继承关系，并且声明它的类初始化函数。
+<li>在 qemu 的 main 函数中调用 MachineClass 的 init 函数，这个函数既会初始化 CPU，也会初始化内存。
+<li>CPU 初始化的时候，会调用 pc_new_cpu 创建一个虚拟 CPU，它会调用 CPU 这个类的初始化函数。
+<li>每一个虚拟 CPU 会调用 qemu_thread_create 创建一个线程，线程的执行函数为 qemu_kvm_cpu_thread_fn。
+<li>在虚拟 CPU 对应的线程执行函数中，我们先是调用 kvm_vm_ioctl(KVM_CREATE_VCPU)，在内核的 KVM 里面，创建一个结构 struct vcpu_vmx，表示这个虚拟 CPU。在这个结构里面，有一个 VMCS，用于保存当前虚拟机 CPU 的运行时的状态，用于状态切换。
+<li>在虚拟 CPU 对应的线程执行函数中，我们接着调用 kvm_vcpu_ioctl(KVM_RUN)，在内核的 KVM 里面运行这个虚拟机 CPU。运行的方式是保存宿主机的寄存器，加载客户机的寄存器，然后调用 __ex(ASM_VMX_VMLAUNCH) 或者 __ex(ASM_VMX_VMRESUME)，进入客户机模式运行。一旦退出客户机模式，就会保存客户机寄存器，加载宿主机寄存器，进入宿主机模式运行，并且会记录退出虚拟机模式的原因。大部分的原因是等待 I/O，因而宿主机调用 kvm_handle_io 进行处理。
+
+
+<h4>  52丨计算虚拟化之内存
+
+<p>虚拟机的内存管理也是需要用户态的 qemu 和内核态的 KVM 共同完成。为了加速内存映射，需要借助硬件的 EPT 技术。
+<p>在用户态 qemu 中，有一个结构 AddressSpace address_space_memory 来表示虚拟机的系统内存，这个内存可能包含多个内存区域 struct MemoryRegion，组成树形结构，指向由 mmap 分配的虚拟内存。
+<p>在 AddressSpace 结构中，有一个 struct KVMMemoryListener，当有新的内存区域添加的时候，会被通知调用 kvm_region_add 来通知内核。
+<p>在用户态 qemu 中，对于虚拟机有一个结构 struct KVMState 表示这个虚拟机，这个结构会指向一个数组的 struct KVMSlot 表示这个虚拟机的多个内存条，KVMSlot 中有一个 void *ram 指针指向 mmap 分配的那块虚拟内存。
+<p>kvm_region_add 是通过 ioctl 来通知内核 KVM 的，会给内核 KVM 发送一个 KVM_SET_USER_MEMORY_REGION 消息，表示用户态 qemu 添加了一个内存区域，内核 KVM 也应该添加一个相应的内存区域。
+<p>和用户态 qemu 对应的内核 KVM，对于虚拟机有一个结构 struct kvm 表示这个虚拟机，这个结构会指向一个数组的 struct kvm_memory_slot 表示这个虚拟机的多个内存条，kvm_memory_slot 中有起始页号，页面数目，表示这个虚拟机的物理内存空间。
+<p>虚拟机的物理内存空间里面的页面当然不是一开始就映射到物理页面的，只有当虚拟机的内存被访问的时候，也即 mmap 分配的虚拟内存空间被访问的时候，先查看 EPT 页表，是否已经映射过，如果已经映射过，则经过四级页表映射，就能访问到物理页面。
+<p>如果没有映射过，则虚拟机会通过 VM-Exit 指令回到宿主机模式，通过 handle_ept_violation 补充页表映射。先是通过 handle_mm_fault 为虚拟机的物理内存空间分配真正的物理页面，然后通过 __direct_map 添加 EPT 页表映射。
+
+<img  src="https://static001.geekbang.org/resource/image/01/9b/0186c533b7ef706df880dfd775c2449b.jpg" >
+
+<h4> 53 | 存储虚拟化（上）
+
+<p>存储虚拟化的过程分为前端、后端和中间的队列。
+
+<li>前端有前端的块设备驱动 Front-end driver，在客户机的内核里面，它符合普通设备驱动的格式，对外通过 VFS 暴露文件系统接口给客户机里面的应用。这一部分这一节我们没有讲，放在下一节解析。
+<li>后端有后端的设备驱动 Back-end driver，在宿主机的 qemu 进程中，当收到客户机的写入请求的时候，调用文件系统的 write 函数，写入宿主机的 VFS 文件系统，最终写到物理硬盘设备上的 qcow2 文件。
+<li>中间的队列用于前端和后端之间传输数据，在前端的设备驱动和后端的设备驱动，都有类似的数据结构 virt-queue 来管理这些队列，这一部分这一节我们也没有讲，也放到下一节解析。
+
+<img  src="https://static001.geekbang.org/resource/image/1f/4b/1f0c3043a11d6ea1a802f7d0f3b0b34b.jpg" >
+
+
+<h4> 54 | 存储虚拟化（下）
+
+<p>存储虚拟化的场景下，整个写入的过程。
+
+<li>在虚拟机里面，应用层调用 write 系统调用写入文件。
+<li>write 系统调用进入虚拟机里面的内核，经过 VFS，通用块设备层，I/O 调度层，到达块设备驱动。
+<li>虚拟机里面的块设备驱动是 virtio_blk，它和通用的块设备驱动一样，有一个 request queue，另外有一个函数 make_request_fn 会被设置为 blk_mq_make_request，这个函数用于将请求放入队列。
+<li>虚拟机里面的块设备驱动是 virtio_blk 会注册一个中断处理函数 vp_interrupt。当 qemu 写入完成之后，它会通知虚拟机里面的块设备驱动。
+<li>blk_mq_make_request 最终调用 virtqueue_add，将请求添加到传输队列 virtqueue 中，然后调用 virtqueue_notify 通知 qemu。
+<li>在 qemu 中，本来虚拟机正处于 KVM_RUN 的状态，也即处于客户机状态。
+<li>qemu 收到通知后，通过 VM exit 指令退出客户机状态，进入宿主机状态，根据退出原因，得知有 I/O 需要处理。
+<li>qemu 调用 virtio_blk_handle_output，最终调用 virtio_blk_handle_vq。
+<li>virtio_blk_handle_vq 里面有一个循环，在循环中，virtio_blk_get_request 函数从传输队列中拿出请求，然后调用 virtio_blk_handle_request 处理请求。
+<li>virtio_blk_handle_request 会调用 blk_aio_pwritev，通过 BlockBackend 驱动写入 qcow2 文件。
+<li>写入完毕之后，virtio_blk_req_complete 会调用 virtio_notify 通知虚拟机里面的驱动。数据写入完成，刚才注册的中断处理函数 vp_interrupt 会收到这个通知。
+
+<img src="https://static001.geekbang.org/resource/image/79/0c/79ad143a3149ea36bc80219940d7d00c.jpg" >
+
+
+<h4> 55 | 网络虚拟化
+
+<p>网络虚拟化场景下网络包的发送过程总结一下。
+
+<li>在虚拟机里面的用户态，应用程序通过 write 系统调用写入 socket。
+<li>写入的内容经过 VFS 层，内核协议栈，到达虚拟机里面的内核的网络设备驱动，也即 virtio_net。
+<li>virtio_net 网络设备有一个操作结构 struct net_device_ops，里面定义了发送一个网络包调用的函数为 start_xmit。
+<li>在 virtio_net 的前端驱动和 qemu 中的后端驱动之间，有两个队列 virtqueue，一个用于发送，一个用于接收。然后，我们需要在 start_xmit 中调用 virtqueue_add，将网络包放入发送队列，然后调用 virtqueue_notify 通知 qemu。
+<li>qemu 本来处于 KVM_RUN 的状态，收到通知后，通过 VM exit 指令退出客户机模式，进入宿主机模式。发送网络包的时候，virtio_net_handle_tx_bh 函数会被调用。
+<li>接下来是一个 for 循环，我们需要在循环中调用 virtqueue_pop，从传输队列中获取要发送的数据，然后调用 qemu_sendv_packet_async 进行发送。
+<li>qemu 会调用 writev 向字符设备文件写入，进入宿主机的内核。
+<li>在宿主机内核中字符设备文件的 file_operations 里面的 write_iter 会被调用，也即会调用 tun_chr_write_iter。
+<li>在 tun_chr_write_iter 函数中，tun_get_user 将要发送的网络包从 qemu 拷贝到宿主机内核里面来，然后调用 netif_rx_ni 开始调用宿主机内核协议栈进行处理。
+<li>宿主机内核协议栈处理完毕之后，会发送给 tap 虚拟网卡，完成从虚拟机里面到宿主机的整个发送过程。
+
+<img src="https://static001.geekbang.org/resource/image/e3/44/e329505cfcd367612f8ae47054ec8e44.jpg" >
+
+
+
