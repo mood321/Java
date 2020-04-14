@@ -518,3 +518,72 @@ apt-get install zip unzip
 
 <img src="https://static001.geekbang.org/resource/image/60/7c/6028c83b0aa00e65916988911aa01b7c.png" >
 
+
+
+### 核心原理篇：第八部分 网络系统
+
+<h4> 43 预习 | Socket通信之网络协议基本原理
+<img src="https://static001.geekbang.org/resource/image/92/0e/92f8e85f7b9a9f764c71081b56286e0e.png">
+
+<p> 常用链路 TCP/UDP->IPv4->ARP 
+
+<h4> 43 | Socket通信
+<p>你需要记住 TCP 协议的 socket 调用的过程。我们接下来就按照这个顺序，依次回忆一下这些系统调用到内核都做了什么：
+
+<li>服务端和客户端都调用 socket，得到文件描述符；
+<li>服务端调用 listen，进行监听；
+<li>服务端调用 accept，等待客户端连接；
+<li>客户端调用 connect，连接服务端；
+<li>服务端 accept 返回用于传输的 socket 的文件描述符；
+<li>客户端调用 write 写入数据；
+<li>服务端调用 read 读取数据。
+<img src="https://static001.geekbang.org/resource/image/d3/5c/d34e667d1c3340deb8c82a2d44f2a65c.png" >
+
+<h4>   44丨Socket内核数据结构
+<p> 除了网络包的接收和发送，其他的系统调用我们都分析到了。可以看出来，它们有一个统一的数据结构和流程。具体如下图所示：
+
+<img  src="https://static001.geekbang.org/resource/image/c0/d8/c028381cf45d65d3f148e57408d26bd8.png">
+
+<p>首先，Socket 系统调用会有三级参数 family、type、protocal，通过这三级参数，分别在 net_proto_family 表中找到 type 链表，在 type 链表中找到 protocal 对应的操作。这个操作分为两层，对于 TCP 协议来讲，第一层是 inet_stream_ops 层，第二层是 tcp_prot 层。
+<p>于是，接下来的系统调用规律就都一样了：
+
+<li>bind 第一层调用 inet_stream_ops 的 inet_bind 函数，第二层调用 tcp_prot 的 inet_csk_get_port 函数；
+<li>listen 第一层调用 inet_stream_ops 的 inet_listen 函数，第二层调用 tcp_prot 的 inet_csk_get_port 函数；
+<li>accept 第一层调用 inet_stream_ops 的 inet_accept 函数，第二层调用 tcp_prot 的 inet_csk_accept 函数；
+<li>connect 第一层调用 inet_stream_ops 的 inet_stream_connect 函数，第二层调用 tcp_prot 的 tcp_v4_connect 函数。
+
+<h4> 45 | 发送网络包（上）
+
+<img src="https://static001.geekbang.org/resource/image/dc/44/dc66535fa7e1a10fd6d728865f6c9344.png" >
+
+<p>这个过程分成几个层次。
+
+<li>VFS 层：write 系统调用找到 struct file，根据里面的 file_operations 的定义，调用 sock_write_iter 函数。sock_write_iter 函数调用 sock_sendmsg 函数。
+<li>Socket 层：从 struct file 里面的 private_data 得到 struct socket，根据里面 ops 的定义，调用 inet_sendmsg 函数。
+<li>Sock 层：从 struct socket 里面的 sk 得到 struct sock，根据里面 sk_prot 的定义，调用 tcp_sendmsg 函数。
+<li>TCP 层：tcp_sendmsg 函数会调用 tcp_write_xmit 函数，tcp_write_xmit 函数会调用 tcp_transmit_skb，在这里实现了 TCP 层面向连接的逻辑。
+<li>IP 层：扩展 struct sock，得到 struct inet_connection_sock，根据里面 icsk_af_ops 的定义，调用 ip_queue_xmit 函数
+
+<p> tcp_write_xmit :
+<li> 第一个概念是TSO（TCP Segmentation Offload）。如果发送的网络包非常大，就像上面说的一样，要进行分段
+<li> 第二个概念是拥塞窗口的概念（cwnd，congestion window），也就是说为了避免拼命发包，把网络塞满了，定义一个窗口的概念，在这个窗口之内的才能发送，超过这个窗口的就不能发送，来控制发送的频率
+<li> 第三个概念就是接收窗口rwnd 的概念（receive window），也叫滑动窗口。如果说拥塞窗口是为了怕把网络塞满，在出现丢包的时候减少发送速度，那么滑动窗口就是为了怕把接收方塞满，而控制发送速度。
+
+<h4> 46 | 发送网络包（下）
+<img  src="https://static001.geekbang.org/resource/image/79/6f/79cc42f3163d159a66e163c006d9f36f.png" >
+
+<p>这个过程分成几个层次。
+
+<li>VFS 层：write 系统调用找到 struct file，根据里面的 file_operations 的定义，调用 sock_write_iter 函数。sock_write_iter 函数调用 sock_sendmsg 函数。
+<li>Socket 层：从 struct file 里面的 private_data 得到 struct socket，根据里面 ops 的定义，调用 inet_sendmsg 函数。
+<li>Sock 层：从 struct socket 里面的 sk 得到 struct sock，根据里面 sk_prot 的定义，调用 tcp_sendmsg 函数。
+<li>TCP 层：tcp_sendmsg 函数会调用 tcp_write_xmit 函数，tcp_write_xmit 函数会调用 tcp_transmit_skb，在这里实现了 TCP 层面向连接的逻辑。
+<li>IP 层：扩展 struct sock，得到 struct inet_connection_sock，根据里面 icsk_af_ops 的定义，调用 ip_queue_xmit 函数。
+<li>IP 层：ip_route_output_ports 函数里面会调用 fib_lookup 查找路由表。FIB 全称是 Forwarding Information Base，转发信息表，也就是路由表。
+<li>在 IP 层里面要做的另一个事情是填写 IP 层的头。
+<li>在 IP 层还要做的一件事情就是通过 iptables 规则。
+<li>MAC 层：IP 层调用 ip_finish_output 进行 MAC 层。
+<li>MAC 层需要 ARP 获得 MAC 地址，因而要调用 ___neigh_lookup_noref 查找属于同一个网段的邻居，他会调用 neigh_probe 发送 ARP。
+<li>有了 MAC 地址，就可以调用 dev_queue_xmit 发送二层网络包了，它会调用 __dev_xmit_skb 会将请求放入队列。
+<li>设备层：网络包的发送回触发一个软中断 NET_TX_SOFTIRQ 来处理队列中的数据。这个软中断的处理函数是 net_tx_action。
+<li>在软中断处理函数中，会将网络包从队列上拿下来，调用网络设备的传输函数 ixgb_xmit_frame，将网络包发的设备的队列上去。

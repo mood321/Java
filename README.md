@@ -18,9 +18,6 @@
         - 现有BIO NIO AIO  NETTY 基本实例
                  - [IO](https://github.com/mood321/JavaDemo/tree/master/src/main/java/IO "创作你的创作")
    
-   + 算法
-       - 现有剑指offer 部分实例
-             - [算法](https://github.com/mood321/JavaDemo/tree/master/src/main/java/offer "创作你的创作")
    
    +   代理知识
        - 现有JDK 和cglib的实例
@@ -64,7 +61,9 @@
             <li> <p> <a href="https://github.com/mood321/JavaDemo/blob/master/src/main/resources/note/Algorithm/数据结构与算法之美.md">数据结构与算法之美</a> 
             <li> <p> <a href="https://github.com/mood321/JavaDemo/blob/master/src/main/resources/note/Algorithm/程序员面试.md">程序员面试</a> 
             <li> <p> <a href="https://github.com/mood321/JavaDemo/blob/master/src/main/resources/note/Algorithm/LeetCode.md">LeetCode</a> 
-                            
+            <li> <p> <a href="https://github.com/mood321/JavaDemo/tree/master/src/main/java/offer">剑指offer 部分实例</a> 
+       
+                               
    + sql
      - [mysql45讲](https://github.com/mood321/JavaDemo/blob/master/src/main/resources/note/sql/sql45讲.md)
                               
