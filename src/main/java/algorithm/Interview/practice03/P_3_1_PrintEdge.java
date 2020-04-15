@@ -103,7 +103,7 @@ public class P_3_1_PrintEdge {
             return;
 
         }
-        if(root.left ==null && root.right==null && root!= edgeMap[i][0] && root !== edgeMap[i][1]){
+        if(root.left ==null && root.right==null && root!= edgeMap[i][0] && root != edgeMap[i][1]){
             System.out.print(root.data +"  ");
         }
         printLeafNoInMap(root.left,i+1,edgeMap);

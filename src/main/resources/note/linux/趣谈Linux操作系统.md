@@ -729,3 +729,48 @@ apt-get install zip unzip
 
 
 
+### 第十部分 容器化
+
+<h4> 56 | 容器
+
+<p>无论是容器，还是虚拟机，都依赖于内核中的技术，虚拟机依赖的是 KVM，容器依赖的是 namespace 和 cgroup 对进程进行隔离。
+<p>为了运行 Docker，有一个 daemon 进程 Docker Daemon 用于接收命令行。
+<p>为了描述 Docker 里面运行的环境和应用，有一个 Dockerfile，通过 build 命令称为容器镜像。容器镜像可以上传到镜像仓库，也可以通过 pull 命令从镜像仓库中下载现成的容器镜像。
+<p>通过 Docker run 命令将容器镜像运行为容器，通过 namespace 和 cgroup 进行隔离，容器里面不包含内核，是共享宿主机的内核的。对比虚拟机，虚拟机在 qemu 进程里面是有客户机内核的，应用运行在客户机的用户态。
+
+<img  src="https://static001.geekbang.org/resource/image/5a/c5/5a499cb50a1b214a39ddf19cbb63dcc5.jpg" >
+
+
+<h4> 57 | Namespace技术
+
+<p> namespace 相关的技术，有六种类型，分别是 UTS、User、Mount、Pid、Network 和 IPC。
+<p>还有两个常用的命令 nsenter 和 unshare，主要用于操作 Namespace，有三个常用的函数 clone、setns 和 unshare。
+<p>在内核里面，对于任何一个进程 task_struct 来讲，里面都会有一个成员 struct nsproxy，用于保存 namespace 相关信息，里面有 struct uts_namespace、struct ipc_namespace、struct mnt_namespace、struct pid_namespace、struct net *net_ns 和 struct cgroup_namespace *cgroup_ns。
+<p>创建 namespace 的时候，我们在内核中会调用 copy_namespaces，调用顺序依次是 copy_mnt_ns、copy_utsname、copy_ipcs、copy_pid_ns、copy_cgroup_ns 和 copy_net_ns，来复制 namespace。
+
+<img src="https://static001.geekbang.org/resource/image/56/d7/56bb9502b58628ff3d1bee83b6f53cd7.png">
+
+<h4> 58 | CGroup技术
+
+<p> 内核中 cgroup 的工作机制
+
+<img src="https://static001.geekbang.org/resource/image/c9/c4/c9cc56d20e6a4bac0f9657e6380a96c4.png" >
+
+<p>第一步，系统初始化的时候，初始化 cgroup 的各个子系统的操作函数，分配各个子系统的数据结构。
+<p>第二步，mount cgroup 文件系统，创建文件系统的树形结构，以及操作函数。
+<p>第三步，写入 cgroup 文件，设置 cpu 或者 memory 的相关参数，这个时候文件系统的操作函数会调用到 cgroup 子系统的操作函数，从而将参数设置到 cgroup 子系统的数据结构中。
+<p>第四步，写入 tasks 文件，将进程交给某个 cgroup 进行管理，因为 tasks 文件也是一个 cgroup 文件，统一会调用文件系统的操作函数进而调用 cgroup 子系统的操作函数，将 cgroup 子系统的数据结构和进程关联起来。
+<p>第五步，对于 cpu 来讲，会修改 scheduled entity，放入相应的队列里面去，从而下次调度的时候就起作用了。对于内存的 cgroup 设定，只有在申请内存的时候才起作用。
+
+<h4> 59 | 数据中心操作系统
+
+<p>数据中心操作系统的功能。
+   
+<img  src="https://static001.geekbang.org/resource/image/1a/e5/1a8450f1fcda83b75c9ba301ebf9fbe5.jpg">
+
+
+### 12-实战串讲篇
+
+
+
+
