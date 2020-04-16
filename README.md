@@ -58,10 +58,10 @@
         - java 算法部分学习笔记
             <ul><p> <a href="https://github.com/mood321/JavaDemo/blob/master/src/main/resources/note/Algorithm/算法学习笔记.md">算法部分学习笔记</a> 
             <li><p> <a href="https://github.com/mood321/JavaDemo/blob/master/src/main/resources/note/Algorithm/算法学习基本数据结构和算法原型.md">算法学习基本数据结构和算法原型</a>    
-            <li> <p> <a href="https://github.com/mood321/JavaDemo/blob/master/src/main/resources/note/Algorithm/数据结构与算法之美.md">数据结构与算法之美</a> 
-            <li> <p> <a href="https://github.com/mood321/JavaDemo/blob/master/src/main/resources/note/Algorithm/程序员面试.md">程序员面试</a> 
-            <li> <p> <a href="https://github.com/mood321/JavaDemo/blob/master/src/main/resources/note/Algorithm/LeetCode.md">LeetCode</a> 
-            <li> <p> <a href="https://github.com/mood321/JavaDemo/tree/master/src/main/java/offer">剑指offer 部分实例</a> 
+            <li> <p> <a href="https://github.com/mood321/JavaDemo/blob/master/src/main/resources/note/Algorithm/数据结构与算法之美.md">数据结构与算法之美(未)</a> 
+            <li> <p> <a href="https://github.com/mood321/JavaDemo/blob/master/src/main/resources/note/Algorithm/程序员面试.md">程序员面试(未)</a> 
+            <li> <p> <a href="https://github.com/mood321/JavaDemo/blob/master/src/main/resources/note/Algorithm/LeetCode.md">LeetCode(未)</a> 
+            <li> <p> <a href="https://github.com/mood321/JavaDemo/tree/master/src/main/java/offer">剑指offer 部分实例(未)</a> 
        
                                
    + sql
@@ -72,6 +72,7 @@
    
    
    + linux
+      - [深入浅出计算机组成原理(未)](https://github.com/mood321/JavaDemo/blob/master/src/main/resources/note/linux/深入浅出计算机组成原理.md)
       - [趣谈Linux操作系统](https://github.com/mood321/JavaDemo/blob/master/src/main/resources/note/linux/趣谈Linux操作系统.md)
                               
    
