@@ -1116,7 +1116,7 @@ update t set c=5 where id=0; /*(0,5,5)*/
 <li> 两个事物相互加 next-key ，会死锁 mysql 会让一个回滚
 
 <p> ps: 加next-key 都是在可重复读隔离级别(repeatable-read)下的
-<p> 添加<a href="./src/main/resources/note/sql/Mysql常用命令.MD">Mysql常用命令.MD</a>
+<p> 添加<a href="/src/main/resources/note/sql/Mysql常用命令.MD">Mysql常用命令.MD</a>
 
 ###    22 | MySQL有哪些“饮鸩止渴”提高性能的方法？
 <p> 第一种方法：先处理掉那些占着连接但是不工作的线程。
