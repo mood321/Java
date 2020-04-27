@@ -1,5 +1,5 @@
 ## JAVA 基础知识
-    -- https://github.com/mood321/JavaDemo.git
+  
     
    ### 已有知识
    +  注解知识 
@@ -31,11 +31,19 @@
        - 动态修改字节码  asm未完  
        - 动态修改字节码 javassit实例
             -[动态修改字节码](https://github.com/mood321/JavaDemo/tree/master/src/main/java/dynamic "创作你的创作")
-            
+   
    +   spring 模块
-        - 添加spring拦截器 拦截重复提交请求
-              -[spring模块](https://github.com/mood321/JavaDemo/tree/master/src/main/java/spring "spring")
-                       
+      - 添加spring拦截器 拦截重复提交请求
+            -[spring模块](https://github.com/mood321/JavaDemo/tree/master/src/main/java/spring "spring")
+     
+   +   其他代码
+         - springboot 整合
+                     -[springboot 整合](https://github.com/mood321/springboot-demo)    
+                      
+   +   其他语言
+         - Python
+                     -[Python](https://github.com/mood321/Python)     
+                      
    +   学习笔记
         - 添加jvm笔记
               -[jvm学习笔记](/src/main/resources/note/JVM%E5%AD%A6%E4%B9%A0%E7%AC%94%E8%AE%B0.md)
@@ -71,8 +79,9 @@
       - [消息队列](/src/main/resources/note/中间件/消息中间件.md)
    
    
-   + linux
-      - [深入浅出计算机组成原理(未)](/src/main/resources/note/linux/深入浅出计算机组成原理.md)
+   + 计算机基础
+      - [深入浅出计算机组成原理](/src/main/resources/note/linux/深入浅出计算机组成原理.md)
       - [趣谈Linux操作系统](/src/main/resources/note/linux/趣谈Linux操作系统.md)
+      - [编译原理之美](/note/compile/编译yuan理之美.md)
                               
    
