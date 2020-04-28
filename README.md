@@ -82,6 +82,6 @@
    + 计算机基础
       - [深入浅出计算机组成原理](/src/main/resources/note/linux/深入浅出计算机组成原理.md)
       - [趣谈Linux操作系统](/src/main/resources/note/linux/趣谈Linux操作系统.md)
-      - [编译原理之美](/note/compile/编译yuan理之美.md)
+      - [编译原理之美](/src/main/resources/note/compile/编译yuan理之美.md)
                               
    

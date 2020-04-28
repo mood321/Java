@@ -7,6 +7,7 @@
 <img src="https://static001.geekbang.org/resource/image/06/93/06b80f8484f4d88c6510213eb27f2093.jpg" >
 <p>编译器的“前端”技术分为词法分析、语法分析和语义分析三个部分。而它主要涉及自动机和形式语言方面的基础的计算理论。
 <h3> 词法分析
+
 <p> 通常，编译器的第一项工作叫做词法分析。就像阅读文章一样，文章是由一个个的中文单词组成的。程序处理也一样，只不过这里不叫单词，而是叫做“词法记号”，英文叫 Token。我嫌“词法记号”这个词太长，后面直接将它称作 Token 吧。
 <p>我们可以通过制定一些规则来区分每个不同的 Token，我举了几个例子，你可以看一下。
 
@@ -17,6 +18,7 @@
   <img  src="https://static001.geekbang.org/resource/image/6d/7e/6d78396e6426d0ad5c5230203d17da7e.jpg" >
   
  <h3>语法分析
+ 
 <p> 编译器下一个阶段的工作是语法分析。词法分析是识别一个个的单词，而语法分析就是在词法分析的基础上识别出程序的语法结构。这个结构是一个树状结构，是计算机容易理解和执行的
 <img src="https://static001.geekbang.org/resource/image/93/fb/9380037e2d2c2c2a8ff50f1367ff37fb.jpg" >
 <p>程序也有定义良好的语法结构，它的语法分析过程，就是构造这么一棵树。一个程序就是一棵树，这棵树叫做抽象语法树（Abstract Syntax Tree，AST）。树的每个节点（子树）是一个语法单元，这个单元的构成规则就叫“语法”。每个节点还可以有下级节点
@@ -28,6 +30,7 @@
 <p>  递归下降算法是一种自顶向下的算法，与之对应的，还有自底向上的算法。这个算法会先将最下面的叶子节点识别出来，然后再组装上一级节点。有点儿像搭积木，我们总是先构造出小的单元，然后再组装成更大的单元。原理就是这么简单。
 
 <h3> 语义分析
+
 <p>编译器接下来做的工作是语义分析。说白了，语义分析就是要让计算机理解我们的真实意图，把一些模棱两可的地方消除掉。
 
 <p>你可能会觉得理解自然语言的含义已经很难了，所以计算机语言的语义分析也一定很难。其实语义分析没那么复杂，因为计算机语言的语义一般可以表达为一些规则，你只要检查是否符合这些规则就行了。比如：
@@ -64,6 +67,7 @@
 5. 数字字面量：在初始状态时，下一个字符是数字，进入这个状态。如果后续仍是数字，就保持在状态 5。
 
 <h3> 初识正则表达式
+
 <p>需要注意的是，不同语言的标识符、整型字面量的规则可能是不同的。比如，有的语言可以允许用 Unicode 作为标识符，也就是说变量名称可以是中文的。还有的语言规定，十进制数字字面量的第一位不能是 0。这时候正则表达式会有不同的写法，对应的有限自动机自然也不同。而且，不同工具的正则表达式写法会略有不同，但大致是差不多的
 <p>解析 int age = 40，处理标识符和关键字规则的冲突
 <p>说完正则表达式，我们接着去处理其他词法，比如解析“int age = 40”这个语句，以这个语句为例研究一下词法分析中会遇到的问题：多个规则之间的冲突
@@ -181,4 +185,211 @@ if (token != null && token.getType() == TokenType.Int) {   // 匹配 Int
         Result: 15                // 忽略递归的细节，得到结果是 15
     Result: 17                    // 根节点的值是 17     </pre>
  
+
+
+### 04 | 语法分析（二）：解决二元表达式中的难点
+<p> 在二元表达式的语法规则中，如果产生式的第一个元素是它自身，那么程序就会无限地递归下去，这种情况就叫做左递归。比如加法表达式的产生式“加法表达式 + 乘法表达式”，就是左递归的。而优先级和结合性则是计算机语言中与表达式有关的核心概念。它们都涉及了语法规则的设计问题。
+
+#### 书写语法规则，并进行推导
+
+<p>书写语法规则，并进行推导
+<p>我们已经知道，语法规则是由上下文无关文法表示的，而上下文无关文法是由一组替换规则（又叫产生式）组成的，比如算术表达式的文法规则可以表达成下面这种形式：
+ <pre> 
+ add -> mul | add + mul
+ mul -> pri | mul * pri
+ pri -> Id | Num | (add) 
+</pre>
+
+<p>这种写法叫做“巴科斯范式”，简称 BNF。Antlr 和 Yacc 这两个工具都用这种写法。为了简化书写，我有时会在课程中把“::=”简化成一个冒号。你看到的时候，知道是什么意思就可以了。
+<p>
+<p>你有时还会听到一个术语，叫做扩展巴科斯范式 (EBNF)。它跟普通的 BNF 表达式最大的区别，就是里面会用到类似正则表达式的一些写法。比如下面这个规则中运用了 * 号，来表示这个部分可以重复 0 到多次：
+
+#### 确保正确的优先级
+
+<p>掌握了语法规则的写法之后，我们来看看如何用语法规则来保证表达式的优先级。刚刚，我们由加法规则推导到乘法规则，这种方式保证了 AST 中的乘法节点一定会在加法节点的下层，也就保证了乘法计算优先于加法计算。
+<p>
+<p>听到这儿，你一定会想到，我们应该把关系运算（>、=、<）放在加法的上层，逻辑运算（and、or）放在关系运算的上层
+<pre>exp -> or | or = exp   
+or -> and | or || and
+and -> equal | and && equal
+equal -> rel | equal == rel | equal != rel
+rel -> add | rel > add | rel < add | rel >= add | rel <= add
+add -> mul | add + mul | add - mul 
+mul -> pri | mul * pri | mul / pri    </pre>
+<p>这里表达的优先级从低到高是：赋值运算、逻辑运算（or）、逻辑运算（and）、相等比较（equal）、大小比较（rel）、加法运算（add）、乘法运算（mul）和基础表达式（pri）。
+
+#### 确保正确的结合性
+
+<p>在上一讲中，我针对算术表达式写的第二个文法是错的，因为它的计算顺序是错的。“2+3+4”这个算术表达式，先计算了“3+4”然后才和“2”相加，计算顺序从右到左，正确的应该是从左往右才对。
+<p>
+<p>这就是运算符的结合性问题。什么是结合性呢？同样优先级的运算符是从左到右计算还是从右到左计算叫做结合性。我们常见的加减乘除等算术运算是左结合的，“.”符号也是左结合的。
+<p>赋值运算就是典型的右结合的例子，比如“x = y = 10”。
+<p>
+<p>规律：对于左结合的运算符，递归项要放在左边；而右结合的运算符，递归项放在右边。
+
+ #### 消除左递归
+ 
+<p>我提到过左递归的情况，也指出递归下降算法不能处理左递归。这里我要补充一点，并不是所有的算法都不能处理左递归，对于另外一些算法，左递归是没有问题的，比如 LR 算法。
+<p>
+<p>消除左递归，用一个标准的方法，就能够把左递归文法改写成非左递归的文法。以加法表达式规则为例，原来的文法是“add -> add + mul”，现在我们改写成：
+  <pre>
+ add -> mul add'
+ add' -> + mul add' | ε   </pre>
+<p>文法中，ε（读作 epsilon）是空集的意思。
+<img  src="https://static001.geekbang.org/resource/image/50/22/50a501fc747b23aa0dca319fa87e6622.jpg">
+
+<p>我们扩展一下话题。在研究递归函数的时候，有一个概念叫做尾递归，尾递归函数的最后一句是递归地调用自身。
+<p>
+<p>编译程序通常都会把尾递归转化为一个循环语句，使用的原理跟上面的伪代码是一样的。相对于递归调用来说，循环语句对系统资源的开销更低，因此，把尾递归转化为循环语句也是一种编译优化技术。
+
+<p>继续左递归的话题。现在我们知道怎么写这种左递归的算法了，大概是下面的样子：
+</pre>
+private SimpleASTNode additive(TokenReader tokens) throws Exception {
+    SimpleASTNode child1 = multiplicative(tokens);  // 应用 add 规则
+    SimpleASTNode node = child1;
+    if (child1 != null) {
+        while (true) {                              // 循环应用 add'
+            Token token = tokens.peek();
+            if (token != null && (token.getType() == TokenType.Plus || token.getType() == TokenType.Minus)) {
+                token = tokens.read();              // 读出加号
+                SimpleASTNode child2 = multiplicative(tokens);  // 计算下级节点
+                node = new SimpleASTNode(ASTNodeType.Additive, token.getText());
+                node.addChild(child1);              // 注意，新节点在顶层，保证正确的结合性
+                node.addChild(child2);
+                child1 = node;
+            } else {
+                break;
+            }
+        }
+    }
+    return node;
+}  </pre>
+
+### 05 | 语法分析（三）：实现一门简单的脚本语言
+
+#### 增加所需要的语法规则
+
+<p>首先，一门脚本语言是要支持语句的，比如变量声明语句、赋值语句等等。单独一个表达式，也可以视为语句，叫做“表达式语句”。你在终端里输入 2+3；，就能回显出 5 来，这就是表达式作为一个语句在执行。按照我们的语法，无非是在表达式后面多了个分号而已。C 语言和 Java 都会采用分号作为语句结尾的标识，我们也可以这样写。
+
+<p>我们用扩展巴科斯范式（EBNF）写出下面的语法规则：
+<pre>
+programm: statement+;  
+statement
+: intDeclaration
+| expressionStatement
+| assignmentStatement
+; </pre>
+<p>变量声明语句以 int 开头，后面跟标识符，然后有可选的初始化部分，也就是一个等号和一个表达式，最后再加分号：
+
+<pre>intDeclaration : 'int' Identifier ( '=' additiveExpression)? ';';</pre>
+<p>表达式语句目前只支持加法表达式，未来可以加其他的表达式，比如条件表达式，它后面同样加分号：
+
+<pre>expressionStatement : additiveExpression ';';</pre>
+<p>赋值语句是标识符后面跟着等号和一个表达式，再加分号：
+
+<pre>assignmentStatement : Identifier '=' additiveExpression ';';</pre>
+<p>为了在表达式中可以使用变量，我们还需要把 primaryExpression 改写，除了包含整型字面量以外，还要包含标识符和用括号括起来的表达式：
+
+<pre>primaryExpression : Identifier| IntLiteral | '(' additiveExpression ')';</pre>
+<p>这样，我们就把想实现的语法特性，都用语法规则表达出来了。接下来，我们就一步一步实现这些特性。
+
+#### 让脚本语言支持变量
+
+<p>我们简单地用了一个 HashMap 作为变量存储区。在变量声明语句和赋值语句里，都可以修改这个变量存储区中的数据，而获取变量值可以采用下面的代码：
+<pre>
+if (variables.containsKey(varName)) {
+    Integer value = variables.get(varName);  // 获取变量值
+    if (value != null) {
+        result = value;                      // 设置返回值
+    } else {                                 // 有这个变量，没有值
+        throw new Exception("variable " + varName + " has not been set any value");
+    }
+}
+else{ // 没有这个变量。
+    throw new Exception("unknown variable: " + varName);
+}</pre>
+
+#### 解析赋值语句
+
+<p>我们来解析赋值语句，例如“age = age + 10 * 2；”：
+<pre>
+private SimpleASTNode assignmentStatement(TokenReader tokens) throws Exception {
+    SimpleASTNode node = null;
+    Token token = tokens.peek();    // 预读，看看下面是不是标识符
+    if (token != null && token.getType() == TokenType.Identifier) {
+        token = tokens.read();      // 读入标识符
+        node = new SimpleASTNode(ASTNodeType.AssignmentStmt, token.getText());
+        token = tokens.peek();      // 预读，看看下面是不是等号
+        if (token != null && token.getType() == TokenType.Assignment) {
+            tokens.read();          // 取出等号
+            SimpleASTNode child = additive(tokens);
+            if (child == null) {    // 出错，等号右面没有一个合法的表达式
+                throw new Exception("invalide assignment statement, expecting an expression");
+            }
+            else{
+                node.addChild(child);   // 添加子节点
+                token = tokens.peek();  // 预读，看看后面是不是分号
+                if (token != null && token.getType() == TokenType.SemiColon) {
+                    tokens.read();      // 消耗掉这个分号
+                } else {            // 报错，缺少分号
+                    throw new Exception("invalid statement, expecting semicolon");
+                }
+            }
+        }
+        else {
+            tokens.unread();    // 回溯，吐出之前消化掉的标识符
+            node = null;
+        }
+    }
+    return node;
+}  </pre>
+<p>为了方便你理解，我来解读一下上面这段代码的逻辑：
+<p>
+<p>我们既然想要匹配一个赋值语句，那么首先应该看看第一个 Token 是不是标识符。如果不是，那么就返回 null，匹配失败。如果第一个 Token 确实是标识符，我们就把它消耗掉，接着看后面跟着的是不是等号。如果不是等号，那证明我们这个不是一个赋值语句，可能是一个表达式什么的。那么我们就要回退刚才消耗掉的 Token，就像什么都没有发生过一样，并且返回 null。回退的时候调用的方法就是 unread()。
+<p>如果后面跟着的确实是等号，那么在继续看后面是不是一个表达式，表达式后面跟着的是不是分号。如果不是，就报错就好了。这样就完成了对赋值语句的解析。 
+
+#### 理解递归下降算法中的回溯
+
+<p>尝试一个规则不成功之后，恢复到原样，再去尝试另外的规则，这个现象就叫做“回溯”。
+<p>什么时候该回溯，什么时候该提示语法错误？
+<p>
+<p>大家在阅读示例代码的过程中，应该发现里面有一些错误处理的代码，并抛出了异常。比如在赋值语句中，如果等号后面没有成功匹配一个加法表达式，我们认为这个语法是错的。因为在我们的语法中，等号后面只能跟表达式，没有别的可能性。\
+<p>
+<p>你可能会意识到一个问题，当我们在算法中匹配不成功的时候，我们前面说的是应该回溯呀，应该再去尝试其他可能性呀，为什么在这里报错了呢？换句话说，什么时候该回溯，什么时候该提示这里发生了语法错误呢？
+<p>
+<p>其实这两种方法最后的结果是一样的。我们提示语法错误的时候，是说我们知道已经没有其他可能的匹配选项了，不需要浪费时间去回溯。就比如，在我们的语法中，等号后面必然跟表达式，否则就一定是语法错误。你在这里不报语法错误，等试探完其他所有选项后，还是需要报语法错误。所以说，提前报语法错误，实际上是我们写算法时的一种优化。
+
+#### 实现一个简单的 REPL
+
+<p> 这个输入、执行、打印的循环过程就叫做 REPL（Read-Eval-Print Loop）。你可以在 REPL 中迅速试验各种语句，REPL 即时反馈的特征会让你乐趣无穷。
+<p>在 SimpleScript.java 中，我们也实现了一个简单的 REPL。基本上就是从终端一行行的读入代码，当遇到分号的时候，就解释执行，代码如下：
+<pre>
+SimpleParser parser = new SimpleParser();
+SimpleScript script = new SimpleScript();
+BufferedReader reader = new BufferedReader(new InputStreamReader(System.in));   // 从终端获取输入
+String scriptText = "";
+System.out.print("\n>");   // 提示符
+while (true) {             // 无限循环
+    try {
+        String line = reader.readLine().trim(); // 读入一行
+        if (line.equals("exit();")) {   // 硬编码退出条件
+            System.out.println("good bye!");
+            break;
+        }
+        scriptText += line + "\n";
+        if (line.endsWith(";")) { // 如果没有遇到分号的话，会再读一行
+            ASTNode tree = parser.parse(scriptText); // 语法解析
+            if (verbose) {
+                parser.dumpAST(tree, "");
+            }
+            script.evaluate(tree, ""); // 对 AST 求值，并打印
+            System.out.print("\n>");   // 显示一个提示符
+            scriptText = "";
+        }
+    } catch (Exception e) { // 如果发现语法错误，报错，然后可以继续执行
+        System.out.println(e.getLocalizedMessage());
+        System.out.print("\n>");   // 提示符
+        scriptText = "";
+    } 
+}   </pre>
 
