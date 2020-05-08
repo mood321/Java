@@ -58,7 +58,8 @@
         - Java集合学习-目录
                  - [集合学习-目录](/src/main/resources/note/集合目录.md)
         - java 部分面试总结
-                 - [java 部分面试总结](/src/main/resources/note/面试题记.md)
+                 - [java 部分面试总结](/note/mianshi/面试题记.md)
+                 - [面试题-3](/note/mianshi/面试题-3.md)
          
         -  java 设计模式
               - [java 设计模式](/src/main/resources/note/设计模式笔记.md)
@@ -82,6 +83,6 @@
    + 计算机基础
       - [深入浅出计算机组成原理](/src/main/resources/note/linux/深入浅出计算机组成原理.md)
       - [趣谈Linux操作系统](/src/main/resources/note/linux/趣谈Linux操作系统.md)
-      - [编译原理之美](/src/main/resources/note/compile/编译yuan理之美.md)
+      - [编译原理之美(未)](/src/main/resources/note/compile/编译yuan理之美.md)
                               
    
