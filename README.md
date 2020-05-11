@@ -58,8 +58,8 @@
         - Java集合学习-目录
                  - [集合学习-目录](/src/main/resources/note/集合目录.md)
         - java 部分面试总结
-                 - [java 部分面试总结](/note/mianshi/面试题记.md)
-                 - [面试题-3](/note/mianshi/面试题-3.md)
+             - [java 部分面试总结](/src/main/resources//note/mianshi/面试题记.md)
+             - [面试题-3](/src/main/resources//note/mianshi/面试题-3.md)
          
         -  java 设计模式
               - [java 设计模式](/src/main/resources/note/设计模式笔记.md)
