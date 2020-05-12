@@ -5,7 +5,7 @@ package algorithm.Interview.practice03;
  * @date 2020/5/12 0:18
  * @email 371428187@qq.com
  */
-public class P_0_11_IsBalance {
+public class P_0_12_IsBalance {
     public static class Node {
         public int value;
         public Node left;
