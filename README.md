@@ -4,37 +4,43 @@
    ### 已有知识
    +  注解知识 
         - 注解基本知识
-            -[Annotation](https://github.com/mood321/JavaDemo/tree/master/src/main/java/Annotation "创作你的创作")
+            -[Annotation](/src/main/java/Annotation "创作你的创作")
    
    +   基本类知识
         - 现有枚举 自定义重新加载类
-             -[class](https://github.com/mood321/JavaDemo/tree/master/src/main/java/clazz "创作你的创作")
+             -[class](/src/main/java/clazz "创作你的创作")
    
    +   集合和数据结构
         -  现有基本排序 位运算符应用
-            -[Conllection](https://github.com/mood321/JavaDemo/tree/master/src/main/java/Conllection "创作你的创作")
+            -[Conllection](/src/main/java/Conllection "创作你的创作")
    
    + IO
         - 现有BIO NIO AIO  NETTY 基本实例
-                 - [IO](https://github.com/mood321/JavaDemo/tree/master/src/main/java/IO "创作你的创作")
+                 - [IO](/src/main/java/IO "创作你的创作")
+
+   + 图片处理
+        - tess4j 文字识别
+                 - [tess4j 文字识别](/src/main/java/imghand/Tess4JTest.java "创作你的创作")
+        - openCV 人脸识别对比
+                 - [openCV 人脸识别对比](/src/main/java/imghand/FaceVideo.java "创作你的创作")
    
    
    +   代理知识
        - 现有JDK 和cglib的实例
-             - [代理](https://github.com/mood321/JavaDemo/tree/master/src/main/java/proxy "创作你的创作")
+             - [代理](/src/main/java/proxy "创作你的创作")
    
    +   线程知识
        - 现有线程池使用 基本线程 并发工具 CountDownLatch 未完 未整理
-            -[线程知识](https://github.com/mood321/JavaDemo/tree/master/src/main/java/ThreadPool "创作你的创作")
+            -[线程知识](/src/main/java/ThreadPool "创作你的创作")
    
    +   动态修改字节码
        - 动态修改字节码  asm未完  
        - 动态修改字节码 javassit实例
-            -[动态修改字节码](https://github.com/mood321/JavaDemo/tree/master/src/main/java/dynamic "创作你的创作")
+            -[动态修改字节码](/src/main/java/dynamic "创作你的创作")
    
    +   spring 模块
       - 添加spring拦截器 拦截重复提交请求
-            -[spring模块](https://github.com/mood321/JavaDemo/tree/master/src/main/java/spring "spring")
+            -[spring模块](/src/main/java/spring "spring")
      
    +   其他代码
          - springboot 整合
@@ -70,7 +76,7 @@
             <li> <p> <a href="/src/main/resources/note/Algorithm/数据结构与算法之美.md">数据结构与算法之美(未)</a> 
             <li> <p> <a href="/src/main/resources/note/Algorithm/程序员面试.md">程序员面试(未)</a> 
             <li> <p> <a href="/src/main/resources/note/Algorithm/LeetCode.md">LeetCode(未)</a> 
-            <li> <p> <a href="https://github.com/mood321/JavaDemo/tree/master/src/main/java/offer">剑指offer 部分实例(未)</a> 
+            <li> <p> <a href="/src/main/java/offer">剑指offer 部分实例(未)</a> 
        
                                
    + sql
