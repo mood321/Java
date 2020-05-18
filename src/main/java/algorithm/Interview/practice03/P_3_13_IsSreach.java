@@ -5,7 +5,7 @@ package algorithm.Interview.practice03;
  * @date 2020/5/14 0:14
  * @email 371428187@qq.com
  */
-public class P_0_13_IsSreach {
+public class P_3_13_IsSreach {
     public static class Node {
         public int value;
         public Node left;

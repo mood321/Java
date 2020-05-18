@@ -5,7 +5,7 @@ package algorithm.Interview.practice03;
  * @date 2020/5/13 0:13
  * @email 371428187@qq.com
  */
-public class P_0_11_KmpContainsAll {
+public class P_3_11_KmpContainsAll {
     public static class Node {
         public int value;
         public Node left;

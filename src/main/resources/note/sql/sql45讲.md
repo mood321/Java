@@ -424,7 +424,7 @@ mysql> select * from tuser where name like '张%' and age=10 and ismale=1;
 <li>版本已提交，而且是在视图创建前提交的，可见
 
  <p>现在，我们用这个规则来判断图4中的查询结果，事务A的查询语句的视图数组是在事务A启动的时候生成的，这时候：
-
+ <img src="https://static001.geekbang.org/resource/image/ed/6e/ed4b8d03287df67ecca53b5b4830ee6e.png">
 <li>(1,3)还没提交，属于情况1，不可见；
 <li>(1,2)虽然提交了，但是是在视图数组创建之后提交的，属于情况2，不可见；
 <li>(1,1)是在视图数组创建之前提交的，可见。

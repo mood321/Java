@@ -9,7 +9,7 @@ import java.util.Stack;
  * @date 2020/5/15 0:33
  * @email 371428187@qq.com
  */
-public class P_0_14_NodeSCBT {
+public class P_3_14_NodeSCBT {
     public static class Node {
         public int value;
         public Node left;
