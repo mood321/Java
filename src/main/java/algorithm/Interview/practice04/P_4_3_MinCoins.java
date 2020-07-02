@@ -98,4 +98,28 @@ public class P_4_3_MinCoins {
         }
         return dp[aim]!=max?dp[aim]:-1;
     }
+
+    /**
+     *  在最后一种基于 4  空间压缩
+     *  最终优化  O(N * aim)
+     * @param arr
+     * @param aim
+     * @return
+     */
+    public static int minCoins5(int[] arr,int aim) {
+        if (arr == null || arr.length == 0 || aim < 0) {
+            return 0;
+        }
+        int[] dp = new int[aim + 1];
+        for (int j = 0; arr[0] * j <= aim; j++) {
+            dp[arr[0] * j] = 1;
+        }
+        int leftup = 0;
+        for (int i = 1; i < arr.length; i++) {
+            for (int j = 1; j <= aim; j++) {
+                dp[j] += j - arr[i] > 0 ? dp[j - arr[i]] : 0;
+            }
+        }
+        return dp[aim];
+    }
 }
