@@ -51,8 +51,11 @@
                      -[Python](https://github.com/mood321/Python)     
                       
    +   学习笔记
+   
         - 添加jvm笔记
-              -[jvm学习笔记](/src/main/resources/note/JVM%E5%AD%A6%E4%B9%A0%E7%AC%94%E8%AE%B0.md)
+           - [jvm学习笔记](/src/main/resources/note/JVM%E5%AD%A6%E4%B9%A0%E7%AC%94%E8%AE%B0.md)
+           - [深入理解 Java 虚拟机](/src/main/resources/note/jvm/深入理解Java虚拟机.md )
+           - [从0开始带你成为JVM实战高手](/src/main/resources/note/jvm/从0开始带你成为JVM实战高手.md )
         - 添加java多线程学习笔记
               - [java多线程学习笔记](/src/main/resources/note/Java多线程学习笔记-多线程.md)
                        
