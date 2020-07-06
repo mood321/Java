@@ -1,0 +1,1 @@
+<p> <<深入理解 Java 虚拟机 >> 的笔记,但当时没记,可以看<a hraf="https://github.com/TangBean/understanding-the-jvm">git地址</a>,笔记之后补
