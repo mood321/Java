@@ -5,7 +5,7 @@ package algorithm.Interview.practice04;
  * @date 2020/7/2 0:31
  * @email 371428187@qq.com
  */
-public class CoinsMethodS {
+public class P_4_4_CoinsMethodS {
     /**
      * 经典递归
      */

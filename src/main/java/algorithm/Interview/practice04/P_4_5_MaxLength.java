@@ -5,7 +5,7 @@ package algorithm.Interview.practice04;
  * @date 2020/7/7 0:44
  * @email 371428187@qq.com
  */
-public class P_4_4_MaxLength {
+public class P_4_5_MaxLength {
 
     /**
      * 最长递增子序列 很有意义

@@ -5,7 +5,7 @@ package algorithm.Interview.practice04;
  * @date 2020/7/8 0:32
  * @email 371428187@qq.com
  */
-public class P_4_5_Hanoi {
+public class P_4_6_Hanoi {
     public static void hanoi1(int n) {
         if (n > 0) {
             func("from", "mid", "to", n);
