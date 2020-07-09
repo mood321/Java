@@ -438,7 +438,7 @@ mixed gc的触发，老年代在堆内存里占比超过45%就会触发。
 ````
 ps:补一手动态年龄判断
 
-Survivor区的对象年龄从小到大进行累加，当累加到 X 年龄时的总和大于50%（可以使用XX:TargetSurvivorRatio=? 来设置保留多少空闲空间，默认值是50），那么比X大的都会晋升入老年代
+Survivor区的对象年龄从小到大进行累加，当累加到 X 年龄时的总和大于50%（可以使用XX:TargetSurvivorRatio=? 来设置保留多少空闲空间，默认值是50），那么比X大的和X都会晋升入老年代 这是>=
 
 老年代gc通常来说都很耗费时间，无论是CMS垃圾回收器还是G1垃圾回收器，因为比如说CMS就要经历初始标记、并发标记、重新标记、并发清理、碎片整理几个环节，过程非常的复杂，G1同样也是如此
 
@@ -642,13 +642,372 @@ par new generation   total 4608K, used 2601K [0x00000000ff600000, 0x00000000ffb0
  ````
 CMS 负责的老年代 ,Metaspace元数据空间和Class空间 使用情况
  
+### 045-46、动手实验：自己动手模拟出对象进入老年代的场景体验一下
+
+#### 动态年龄判定规则
+1. 躲过15次gc，达到15岁高龄之后进入老年代；
+2. 动态年龄判定规则，如果Survivor区域内年龄1+年龄2+年龄3+年龄n的对象总和大于Survivor区的50%，此时年龄n以上的对象会进入
+老年代，不一定要达到15岁
+3. 如果一次Young GC后存活对象太多无法放入Survivor区，此时直接计入老年代
+4. 大对象直接进入老年代
+
+配置参数
+>“-XX:NewSize=10485760 -XX:MaxNewSize=10485760 -XX:InitialHeapSize=20971520 -XX:MaxHeapSize=20971520 -
+ XX:SurvivorRatio=8 -XX:MaxTenuringThreshold=15 -XX:PretenureSizeThreshold=10485760 -XX:+UseParNewGC -
+ XX:+UseConcMarkSweepGC -XX:+PrintGCDetails -XX:+PrintGCTimeStamps -Xloggc:gc.log
+
+新生代我们通过“-XX:NewSize”设置为10MB了         然后其中Eden区是8MB，每个Survivor区是1MB，Java堆总大小是20MB，老年代是10MB，大对象必须超过10MB才会直接进入老年代
  
+ 代码
+````
+        byte[] arr = new byte[2*1024 * 1024];
+        arr = new byte[2*1024 * 1024];
+        arr = new byte[2*1024 * 1024];
+        arr = null;
+        byte[] arr2 = new byte[128 * 1024];
+        byte[] arr3 = new byte[2*1024 * 1024];
+````
+
+日志
+````
+ 0.297: [GC (Allocation Failure) 0.297: [ParNew: 7260K->715K(9216K), 0.0012641 secs] 7260K->715K(19456K), 0.0015046
+ secs] [Times: user=0.00 sys=0.00, real=0.00 secs]
+ Heap
+ par new generation total 9216K, used 2845K [0x00000000fec00000, 0x00000000ff600000, 0x00000000ff600000)
+  eden space 8192K, 26% used [0x00000000fec00000, 0x00000000fee14930, 0x00000000ff400000)
+  from space 1024K, 69% used [0x00000000ff500000, 0x00000000ff5b2e10, 0x00000000ff600000)
+  to space 1024K, 0% used [0x00000000ff400000, 0x00000000ff400000, 0x00000000ff500000)
+ concurrent mark-sweep generation total 10240K, used 0K [0x00000000ff600000, 0x0000000100000000, 0x0000000100000000)
+ Metaspace used 2782K, capacity 4486K, committed 4864K, reserved 1056768K
+  class space used 300K, capacity 386K, committed 512K, reserved 1048576K
+````
+
+#### 部分代码的GC日志分析
+
+连续申请3个 2M的对象,6m eden 8m ,后面又申请128k  ,在申请2m  肯定不够 gc
+
+通过日志可以清晰看出，此时From Survivor区域被占据了69%的内存，大概就是700KB左右，这就是一次Young GC后存活下来的对象，他们都进入From Survivor区了。
+
+同时Eden区域内被占据了26%的空间，大概就是2MB左右，这就是byte[] array3 = new byte[2 * 1024 * 1024];，这行代码在gc过后分配在Eden区域内的数组
+
+此时from 内的对象 年龄应该是1 ,gc 后剩余715k 应该全部进入from, from 1m ,大于一半,所以应比他大的都在old
 
 
+代码修改
+````
+        byte[] arr = new byte[2*1024 * 1024];
+        arr = new byte[2*1024 * 1024];
+        arr = new byte[2*1024 * 1024];
+        arr = null;
+        byte[] arr2 = new byte[128 * 1024];
+        byte[] arr3 = new byte[2*1024 * 1024];
 
+        arr3 = new byte[2*1024 * 1024];
+        arr3 = new byte[2*1024 * 1024];
+        arr3 = new byte[128 * 1024];
+         arr3=null;
+        byte[] arr4 = new byte[2*1024 * 1024];
+````
 
+#### 在分析下
 
-
+ 第一次gc 完毕, from 715k ,eden 2m
  
+ 然后申请 2个2m 1个 128K, null ,在申请2m ,不够 进入第二次par new  gc
+ 
+ 日志
+ ````
+    0.269: [GC (Allocation Failure) 0.269: [ParNew: 7260K->713K(9216K), 0.0013103 secs] 7260K->713K(19456K), 0.0015501
+    secs] [Times: user=0.00 sys=0.00, real=0.00 secs]
+    0.271: [GC (Allocation Failure) 0.271: [ParNew: 7017K->0K(9216K), 0.0036521 secs] 7017K->700K(19456K), 0.0037342 secs]
+    [Times: user=0.06 sys=0.00, real=0.00 secs]
+    Heap
+    par new generation total 9216K, used 2212K [0x00000000fec00000, 0x00000000ff600000, 0x00000000ff600000)
+     eden space 8192K, 27% used [0x00000000fec00000, 0x00000000fee290e0, 0x00000000ff400000)
+     from space 1024K, 0% used [0x00000000ff400000, 0x00000000ff400000, 0x00000000ff500000)
+     to space 1024K, 0% used [0x00000000ff500000, 0x00000000ff500000, 0x00000000ff600000)
+    concurrent mark-sweep generation total 10240K, used 700K [0x00000000ff600000, 0x0000000100000000, 0x0000000100000000)
+    Metaspace used 2782K, capacity 4486K, committed 4864K, reserved 1056768K
+     class space used 300K, capacity 386K, committed 512K, reserved 1048576K
+````
 
+第一次上面说了  第二次 7017K->0K  年轻代0k  eden 27% ,这个是刚申请的arr4 的2m,那其他对象呢
+
+其实此时会发现Survivor区域中的对象都是存活的，而且总大小超过50%了，而且年龄都是1岁
+
+此时根据动态年龄判定规则：年龄1+年龄2+年龄n的对象总大小超过了Survivor区域的50%，年龄n以上的对象进入老年代。
+
+此时eden 是arr4  ,老年是arr2和其他对象
+
+
+#### Survivor区域放不下，就直接进入老年代
+
+参数和上面一样
+
+代码
+````
+   byte[] arr = new byte[2*1024 * 1024];
+   arr = new byte[2*1024 * 1024];
+   arr = new byte[2*1024 * 1024];
+   
+    byte[] arr2 = new byte[128 * 1024];
+    arr2 = null;
+    byte[] arr3 = new byte[2*1024 * 1024];
+````
+
+日志
+
+````
+
+0.421: [GC (Allocation Failure) 0.421: [ParNew: 7260K->573K(9216K), 0.0024098 secs] 7260K->2623K(19456K), 0.0026802 secs] [Times: user=0.00 sys=0.00, real=0.00 secs]
+Heap
+
+par new generation   total 9216K, used 2703K [0x00000000fec00000, 0x00000000ff600000, 0x00000000ff600000)
+
+ eden space 8192K,  26% used [0x00000000fec00000, 0x00000000fee14930, 0x00000000ff400000)
+ from space 1024K,  55% used [0x00000000ff500000, 0x00000000ff58f570, 0x00000000ff600000)
+ to   space 1024K,   0% used [0x00000000ff400000, 0x00000000ff400000, 0x00000000ff500000)
+
+concurrent mark-sweep generation total 10240K, used 2050K [0x00000000ff600000, 0x0000000100000000, 0x0000000100000000)
+Metaspace       used 2782K, capacity 4486K, committed 4864K, reserved 1056768K
+
+ class space    used 300K, capacity 386K, committed 512K, reserved 1048576K
+````
+
+逻辑和上面第一个一致 ,但他gc后 ,活下来一个2m 的对象, 和其他对象( 这部分应该是573k)  ,servivor 1m ,肯定是放不下的
+
+而通过日志也能看到 2m那个,在old ,573的在survicor  
+
+#### 结论
+
+在这种场景下，有部分对象会留在Survivor中，有部分对象会进入老年代的。
+
+
+### 047、高级工程师的硬核技能：JVM的Full GC日志应该怎么看？
+
+参数
+> “-XX:NewSize=10485760 -XX:MaxNewSize=10485760 -XX:InitialHeapSize=20971520 -XX:MaxHeapSize=20971520 -XX:SurvivorRatio=8  -XX:MaxTenuringThreshold=15 -XX:PretenureSizeThreshold=3145728 -XX:+UseParNewGC -XX:+UseConcMarkSweepGC -XX:+PrintGCDetails -XX:+PrintGCTimeStamps -Xloggc:gc.log”
+
+新生代我们通过“-XX:NewSize”设置为10MB了         然后其中Eden区是8MB，每个Survivor区是1MB，Java堆总大小是20MB，老年代是10MB
+
+注意  PretenureSizeThreshold   大对象设为3m  
+
+代码
+
+````
+      byte[] arr = new byte[4*1024 * 1024];
+      arr=null;
+      byte[] arr2 = new byte[2*1024 * 1024];
+      byte[] arr3 = new byte[2*1024 * 1024];
+      byte[] arr4 = new byte[2*1024 * 1024];
+      byte[] arr5 = new byte[128* 1024];
+         
+      byte[] arr6 = new byte[2*1024 * 1024];
+````
+
+日志
+````
+    “0.308: [GC (Allocation Failure) 0.308: [ParNew (promotion failed): 7260K->7970K(9216K), 0.0048975 secs]0.314: [CMS: 8194K->6836K(10240K), 0.0049920 secs] 11356K->6836K(19456K), [Metaspace: 2776K->2776K(1056768K)], 0.0106074 secs] [Times: user=0.00 sys=0.00, real=0.01 secs]
+    Heap
+    
+    par new generation   total 9216K, used 2130K [0x00000000fec00000, 0x00000000ff600000, 0x00000000ff600000)
+     eden space 8192K,  26% used [0x00000000fec00000, 0x00000000fee14930, 0x00000000ff400000)
+     from space 1024K,   0% used [0x00000000ff500000, 0x00000000ff500000, 0x00000000ff600000)
+     to   space 1024K,   0% used [0x00000000ff400000, 0x00000000ff400000, 0x00000000ff500000)
+    
+    concurrent mark-sweep generation total 10240K, used 6836K [0x00000000ff600000, 0x0000000100000000, 0x0000000100000000)
+    Metaspace       used 2782K, capacity 4486K, committed 4864K, reserved 1056768K
+     class space    used 300K, capacity 386K, committed 512K, reserved 1048576K”
+     
+     [CMS: 8194K->6836K(10240K), 0.0049920 secs] 11356K->6836K(19456K), [Metaspace: 2776K->2776K(1056768K)], 0.0106074 secs]
+````
+
+
+#### 分析
+>基于执行arr6 的时候 ,申请 2m
+
+1 arr 是大对象,直接进old ,  3个2m 的对象+128  在申请会gc
+
+2 但这几个对象都是强引用,收不掉, 放到survivor  放不下,
+
+3 这时old 有4m ,放6m+128  一定放不下,担保,ParNew 强引用,还是存活,会触发FULL GC 清掉 4m 大对象
+
+````
+    [CMS: 8194K->6836K(10240K), 0.0049920 secs] 11356K->6836K(19456K), [Metaspace: 2776K->2776K(1056768K)], 0.0106074 secs]
+````
+
+4 CMS   8194K->6836K 从哪来的?   他会先放2个2m 不够gc,最后放后面   4+2+2-4+2+其他(包括那128) =6836K
+
+5 eden 放入 arr6 ,eden 占用2m 
+
+#### 总结
+1 FULL 触发,忘了看下前面画的图
+2 还有一个，就是老年代被使用率达到了92%的阈值，也会触发Full GC。
+
+### 048、第7周作业：自己尝试着分析一把你们线上系统的JVM GC日志
+
+> 2020/7/8  我专门试了下测试机,  表现打分不及格
+
+
+### 049、第7周答疑：本周问题答疑汇总
+
+1 补手动态年龄, 是>= 进入old  ,每次Minor GC过后就会触发动态年龄判定机制的
+
+
+### 050、动手实验：使用 jstat 摸清线上系统的JVM运行状况
+> 他可以轻易的让你看到当前运行中的系统，他的JVM内的Eden、Survivor、老年代的内存使用情况，还有Young GC和Full gC的执行次数以及耗时
+
+常用 jstat -gc PID
+````
+  S0C：这是From Survivor区的大小
+  
+  
+  S1C：这是To Survivor区的大小
+  
+  S0U：这是From Survivor区当前使用的内存大小
+  
+  S1U：这是To Survivor区当前使用的内存大小
+  
+  EC：这是Eden区的大小
+  
+  EU：这是Eden区当前使用的内存大小
+  
+  OC：这是老年代的大小
+  
+  OU：这是老年代当前使用的内存大小
+  
+  MC：这是方法区（永久代、元数据区）的大小
+  
+  MU：这是方法区（永久代、元数据区）的当前使用的内存大小
+  
+  YGC：这是系统运行迄今为止的Young GC次数
+  
+  YGCT：这是Young GC的耗时
+  
+  FGC：这是系统运行迄今为止的Full GC次数
+  
+  FGCT：这是Full GC的耗时
+  
+  GCT：这是所有GC的总耗时
+````
+
+其他的jstat命令
+````
+    除了上面的jstat -gc命令是最常用的以外，他还有一些命令可以看到更多详细的信息，如下所示：
+    
+    jstat -gccapacity PID：堆内存分析
+    
+    jstat -gcnew PID：年轻代GC分析，这里的TT和MTT可以看到对象在年轻代存活的年龄和存活的最大年龄
+    
+    jstat -gcnewcapacity PID：年轻代内存分析
+    
+    jstat -gcold PID：老年代GC分析
+    
+    jstat -gcoldcapacity PID：老年代内存分析
+    
+    jstat -gcmetacapacity PID：元数据区内存分析
+````
+
+jstat -gc PID 1000 10
+
+ 主要功能 (可以配合gc 日志)
+>这行命令，他的意思就是每隔1秒钟更新出来最新的一行jstat统计信息，一共执行10次jstat统计
+
++ 能动态推测占用问题   ,新生代对象增长的速率
++ Young GC的触发频率和每次耗时
++ 每次Young GC后有多少对象是存活和进入老年代
++ Full GC的触发时机和耗时
+
+### 051、动手实验：使用jmap和jhat摸清线上系统的对象分布
+
+>使用jmap了解系统运行时的内存区域
+
+#### map -heap PID
+> 堆占用状态
+
+#### jmap -histo PID
+
+>jvm中的对象对内存占用的情况，只要直接用jmap -histo命令即可，非常好用
+
+#### 使用jmap生成堆内存转储快照
+>jmap -dump:live,format=b,file=dump.hprof PID
+
+#### 使用jhat在浏览器中分析堆转出快照
+> jhat dump.hprof -port 7000    去分析堆快照了，jhat内置了web服务器，他会支持你通过浏览器来以图形化的方式分析堆转储快照
+
+### 052、从测试到上线：如何分析JVM运行状况及合理优化？
+>优化思路其实简单来说就一句话：
+
+>尽量让每次Young GC后的存活对象小于Survivor区域的50%，都留存在年轻代里。尽量别让对象进入老年代。尽量减少Full GC的频率，避免频繁Full GC对JVM性能的影响。
+
+#### 对线上系统进行JVM监控
++ 第一种方法会“low”一些，其实就是每天在高峰期和低峰期都用jstat、jmap、jhat等工具去看看线上系统的JVM运行是否正常，有没有频繁Full GC的问题。
+
++ 第二种方法在中大型公司里会多一些，大家都知道，很多中大型公司都会部署专门的监控系统，比较常见的有Zabbix、OpenFalcon、Ganglia，等等。
+
+### 053、案例实战：每秒10万并发的BI系统，如何定位和解决频繁Young GC问题？
+> 还是服务于百万级商家的BI系统
+
+> 可以用while(true)  模拟
+####  技术痛点：实时自动刷新报表 + 大数据量报表
+> 频繁请求数据,和大数据 都和一直生成大量对象
+
+> 用jstat 分析运行轨迹和 gc 次数,时间
+
+
+### 054、案例实战：每日百亿数据量的实时分析引擎，如何定位和解决频繁Full GC问题？
+
+> 计算系统的特点 ,持续不断的 计算,数据提取和计算的任务。 都会生成行的对象
+
+> 占用和运行逻辑 和上面一样,这儿主要写 优化处理
+
+参数      (大对象20m)
+````
+    -XX:NewSize=104857600 -XX:MaxNewSize=104857600 -XX:InitialHeapSize=209715200 -XX:MaxHeapSize=209715200 -XX:SurvivorRatio=8  -XX:MaxTenuringThreshold=15 -XX:PretenureSizeThreshold=20971520 -XX:+UseParNewGC -XX:+UseConcMarkSweepGC -XX:+PrintGCDetails -XX:+PrintGCTimeStamps -Xloggc:gc.log
+````
+
+模拟代码
+
+````
+    public static void main(String[] args) {
+           Thread.sleep(30000);
+           while (true) {
+               loadData();
+           }
+       }
+       private static void loadData() {
+           byte[] data = null;
+           for (int i = 0; i < 4; i++) {
+               data = new byte[10 * 1024 * 1024];
+           }
+           data=null;
+           byte[] data1 = new byte[10 * 1024 * 1024];
+           byte[] data2 = new byte[10 * 1024 * 1024];
+           byte[] data3 = new byte[10 * 1024 * 1024];
+           data3 = new byte[10 * 1024 * 1024];
+           Thread.sleep(1000);
+       }
+````
+
+大概意思其实就是，每秒钟都会执行一次loadData()方法，他会分配4个10MB的数组，但是都立马成为垃圾，但是会有data1和data2两个10MB的数组是被变量引用必须存活的，此时Eden区已经占用了六七十MB空间了，接着是data3变量依次指向了两个10MB的数组，这是为了在1s内触发Young GC的。
+
+#### 分析
+
+老年代总共就100MB左右，gc 每次存活30M ,survivor 放不下,直接进入old ,加上其他对象,两三次Young 就需要一次FULL 
+
+还有一点,每次Full GC都是由Young GC触发的，因为Young GC过后存活对象太多要放入老年代，老年代内存不够了触发Full GC，所以必须得等Full GC执行完毕了，Young GC才能把存活对象放入老年代，才算结束。这就导致Young GC也是速度非常慢。
+
+
+
+#### 优化
+-XX:NewSize=209715200 -XX:MaxNewSize=209715200 -XX:InitialHeapSize=314572800 -XX:MaxHeapSize=314572800 -XX:SurvivorRatio=2  -XX:MaxTenuringThreshold=15 -XX:PretenureSizeThreshold=20971520 -XX:+UseParNewGC -XX:+UseConcMarkSweepGC -XX:+PrintGCDetails -XX:+PrintGCTimeStamps -Xloggc:gc.log
+
+把堆大小调大为了300MB，年轻代给了200MB，同时“-XX:SurvivorRatio=2”表明，Eden:Survivor:Survivor的比例为2:1:1，所以Eden区是100MB，每个Survivor区是50MB，老年代也是100MB。
+
+
+### 055、第8周作业
+> 公司实战,恩........
+
+### 056、第8周答疑：本周问题答疑汇总
+> ...
 
