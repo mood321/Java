@@ -87,7 +87,8 @@
      - [mysql45讲](/src/main/resources/note/sql/sql45讲.md)
                               
    + 中间件
-      - [消息队列](/src/main/resources/note/中间件/消息中间件.md)
+      - [消息队列(未)](/src/main/resources/note/中间件/消息中间件.md)
+      - [从 0 开始带你成为消息中间件实战高手](/src/main/resources/note/中间件/从0开始带你成为消息中间件实战高手.md)
    
    
    + 计算机基础
