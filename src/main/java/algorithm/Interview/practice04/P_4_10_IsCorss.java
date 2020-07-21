@@ -6,7 +6,7 @@ package algorithm.Interview.practice04;
  * @email 371428187@qq.com
  */
 public class P_4_10_IsCorss {
-        public static boolean chkMixture(String A, int n, String B, int m, String C, int v) {
+        public static boolean chkMixture(String A, int n, String B, int m, String C) {
             // d[i][j]表示当A在i位处是交错的同时s2在j位处是交错的s3在i+j处是否是交错的。
             // 如果A和B在当前位置是空，C也是空，为true
             // 如果A为空，B之前的位置是交错的而且s2在当前位置和s3的当前位置字符是一样的，则视为true；反之s2为空时情况是一样的。
