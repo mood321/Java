@@ -85,13 +85,17 @@
                                
    + sql
      - [mysql45讲](/src/main/resources/note/sql/sql45讲.md)
+     
+   + nosql
+     - [redis高并发](/src/main/resources/note/中间件/redis高并发.md)
                               
    + 中间件
       - [消息队列(未)](/src/main/resources/note/中间件/消息中间件.md)
       - [从 0 开始带你成为消息中间件实战高手](/src/main/resources/note/中间件/从0开始带你成为消息中间件实战高手.md)
+      
    
    
-   + 计算机基础
+   + 基础
       - [深入浅出计算机组成原理](/src/main/resources/note/linux/深入浅出计算机组成原理.md)
       - [趣谈Linux操作系统](/src/main/resources/note/linux/趣谈Linux操作系统.md)
       - [编译原理之美(未)](/src/main/resources/note/compile/编译yuan理之美.md)
