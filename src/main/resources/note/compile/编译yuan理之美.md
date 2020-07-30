@@ -19,7 +19,7 @@
 <p>它分析整个程序的字符串，当遇到不同的字符时，会驱使它迁移到不同的状态。例如，词法分析程序在扫描 age 的时候，处于“标识符”状态，等它遇到一个 > 符号，就切换到“比较操作符”的状态。词法分析过程，就是这样一个个状态迁移的过程。
   <img  src="https://static001.geekbang.org/resource/image/6d/7e/6d78396e6426d0ad5c5230203d17da7e.jpg" >
   
-###语法分析
+### 语法分析
  
 <p> 编译器下一个阶段的工作是语法分析。词法分析是识别一个个的单词，而语法分析就是在词法分析的基础上识别出程序的语法结构。这个结构是一个树状结构，是计算机容易理解和执行的
 <img src="https://static001.geekbang.org/resource/image/93/fb/9380037e2d2c2c2a8ff50f1367ff37fb.jpg" >
@@ -245,7 +245,7 @@ mul -> pri | mul * pri | mul / pri    </pre>
 <p>编译程序通常都会把尾递归转化为一个循环语句，使用的原理跟上面的伪代码是一样的。相对于递归调用来说，循环语句对系统资源的开销更低，因此，把尾递归转化为循环语句也是一种编译优化技术。
 
 <p>继续左递归的话题。现在我们知道怎么写这种左递归的算法了，大概是下面的样子：
-</pre>
+<pre>
 private SimpleASTNode additive(TokenReader tokens) throws Exception {
     SimpleASTNode child1 = multiplicative(tokens);  // 应用 add 规则
     SimpleASTNode node = child1;
