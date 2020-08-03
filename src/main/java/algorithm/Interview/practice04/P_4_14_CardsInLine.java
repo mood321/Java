@@ -5,7 +5,7 @@ package algorithm.Interview.practice04;
  * @date 2020/7/29 0:26
  * @email 371428187@qq.com
  */
-public class P_14_CardsInLine {
+public class P_4_14_CardsInLine {
     public static int win1(int[] arr) {
         if (arr == null || arr.length == 0) {
             return 0;

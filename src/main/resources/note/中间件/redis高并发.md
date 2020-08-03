@@ -441,3 +441,528 @@ master默认每隔10秒发送一次heartbeat，salve node每隔1秒发送一个h
 6、异步复制
 
 master每次接收到写命令之后，现在内部写入数据，然后异步发送给slave node
+
+
+## 18_在项目中部署redis的读写分离架构（包含节点间认证口令）
+
+ 根据上面的安装
+ 
+（1）修改redis.conf中的部分配置为生产环境
+ ````
+daemonize	yes							让redis以daemon进程运行
+pidfile		/var/run/redis_6379.pid 	设置redis的pid文件位置
+port		6379						设置redis的监听端口号
+dir 		/var/redis/6379				设置持久化文件的存储位置
+ ````
+ ---
+ 
+（7）让redis跟随系统启动自动启动
+
+在redis_6379脚本中，最上面，加入两行注释
+ ````
+# chkconfig:   2345 90 10
+
+# description:  Redis is a persistent key-value database
+````
+chkconfig redis_6379 on
+
+在slave node上配置：slaveof 192.168.1.1 6379，即可
+
+也可以使用slaveof命令
+
+----
+
+2、强制读写分离
+
+基于主从复制架构，实现读写分离
+
+redis slave node只读，默认开启，slave-read-only
+
+开启了只读的redis slave node，会拒绝所有的写操作，这样可以强制搭建成读写分离的架构
+
+---
+
+3、集群安全认证
+
+master上启用安全认证，requirepass
+master连接口令，masterauth
+
+--- 
+
+4、读写分离架构的测试
+
+先启动主节点，eshop-cache01上的redis实例
+再启动从节点，eshop-cache02上的redis实例
+
+刚才我调试了一下，redis slave node一直说没法连接到主节点的6379的端口
+
+在搭建生产环境的集群的时候，不要忘记修改一个配置，bind
+
+bind 127.0.0.1 -> 本地的开发调试的模式，就只能127.0.0.1本地才能访问到6379的端口
+
+每个redis.conf中的bind 127.0.0.1 -> bind自己的ip地址
+在每个节点上都: iptables -A INPUT -ptcp --dport  6379 -j ACCEPT
+
+redis-cli -h ipaddr
+info replication
+
+在主上写，在从上读
+
+## 19_对项目的主从redis架构进行QPS压测以及水平扩容支撑更高QPS
+
+[对项目的主从redis架构进行QPS压测以及水平扩容支撑更高QPS](/src/main/resources/note/中间件/redisha/19_对项目的主从redis架构进行QPS压测以及水平扩容支撑更高QPS.txt)
+
+## 20_redis主从架构下如何才能做到99.99%的高可用性？
+
+1、什么是99.99%高可用？
+
+架构上，高可用性，99.99%的高可用性
+
+讲的学术，99.99%，公式，系统可用的时间 / 系统故障的时间，365天，在365天 * 99.99%的时间内，你的系统都是可以对外提供服务的，那就是高可用性，99.99%
+
+系统可用的时间 / 总的时间 = 高可用性，然后会对各种时间的概念，说一大堆解释
+
+2、redis不可用是什么？单实例不可用？主从架构不可用？不可用的后果是什么？
+
+机器宕机,   系统出错
+
+master 宕机了,没法写入数据了
+
+缓存出错,大量请求到mysql ,系统宕机
+
+3、redis怎么才能做到高可用？
+
+哨兵+主从; cluster 
+
+## 21_redis哨兵架构的相关基础知识的讲解
+
+1、哨兵的介绍
+
+sentinal，中文名是哨兵
+
+哨兵是redis集群架构中非常重要的一个组件，主要功能如下
+
+1. 集群监控，负责监控redis master和slave进程是否正常工作
+1. 消息通知，如果某个redis实例有故障，那么哨兵负责发送消息作为报警通知给管理员
+1. 故障转移，如果master node挂掉了，会自动转移到slave node上
+1. 配置中心，如果故障转移发生了，通知client客户端新的master地址
+
+哨兵本身也是分布式的，作为一个哨兵集群去运行，互相协同工作
+
+1. 故障转移时，判断一个master node是宕机了，需要大部分的哨兵都同意才行，涉及到了分布式选举的问题
+1. 即使部分哨兵节点挂掉了，哨兵集群还是能正常工作的，因为如果一个作为高可用机制重要组成部分的故障转移系统本身是单点的，那就很坑爹了
+
+目前采用的是sentinal 2版本，sentinal 2相对于sentinal 1来说，重写了很多代码，主要是让故障转移的机制和算法变得更加健壮和简单
+
+---
+
+2、哨兵的核心知识
+
+1. 哨兵至少需要3个实例，来保证自己的健壮性
+1. 哨兵 + redis主从的部署架构，是不会保证数据零丢失的，只能保证redis集群的高可用性
+1. 对于哨兵 + redis主从这种复杂的部署架构，尽量在测试环境和生产环境，都进行充足的测试和演练
+
+---
+3、为什么redis哨兵集群只有2个节点无法正常工作？
+
+哨兵集群必须部署2个以上节点
+
+如果哨兵集群仅仅部署了个2个哨兵实例，quorum=1
+  ````
++----+         +----+
+| M1 |---------| R1 |
+| S1 |         | S2 |
++----+         +----+
+ ````
+ ````
+Configuration: quorum = 1
+ ````
+master宕机，s1和s2中只要有1个哨兵认为master宕机就可以还行切换，同时s1和s2中会选举出一个哨兵来执行故障转移
+
+同时这个时候，需要majority，也就是大多数哨兵都是运行的，2个哨兵的majority就是2（2的majority=2，3的majority=2，5的majority=3，4的majority=2），2个哨兵都运行着，就可以允许执行故障转移
+
+但是如果整个M1和S1运行的机器宕机了，那么哨兵只有1个了，此时就没有majority来允许执行故障转移，虽然另外一台机器还有一个R1，但是故障转移不会执行
+
+4、经典的3节点哨兵集群
+````
+       +----+
+       | M1 |
+       | S1 |
+       +----+
+          |
++----+    |    +----+
+| R2 |----+----| R3 |
+| S2 |         | S3 |
++----+         +----+
+````
+````
+Configuration: quorum = 2，majority
+````
+如果M1所在机器宕机了，那么三个哨兵还剩下2个，S2和S3可以一致认为master宕机，然后选举出一个来执行故障转移
+
+同时3个哨兵的majority是2，所以还剩下的2个哨兵运行着，就可以允许执行故障转移
+
+## 22_redis哨兵主备切换的数据丢失问题：异步复制、集群脑裂
+
+1、两种数据丢失的情况
+2、解决异步复制和脑裂导致的数据丢失
+
+------------------------------------------------------------------
+
+1、两种数据丢失的情况
+
+主备切换的过程，可能会导致数据丢失
+
+（1）异步复制导致的数据丢失
+
+因为master -> slave的复制是异步的，所以可能有部分数据还没复制到slave，master就宕机了，此时这些部分数据就丢失了
+
+（2）脑裂导致的数据丢失
+
+脑裂，也就是说，某个master所在机器突然脱离了正常的网络，跟其他slave机器不能连接，但是实际上master还运行着
+
+此时哨兵可能就会认为master宕机了，然后开启选举，将其他slave切换成了master
+
+这个时候，集群里就会有两个master，也就是所谓的脑裂
+
+此时虽然某个slave被切换成了master，但是可能client还没来得及切换到新的master，还继续写向旧master的数据可能也丢失了
+
+因此旧master再次恢复的时候，会被作为一个slave挂到新的master上去，自己的数据会清空，重新从新的master复制数据
+
+------------------------------------------------------------------
+
+2、解决异步复制和脑裂导致的数据丢失
+
+min-slaves-to-write 1
+min-slaves-max-lag 10
+
+要求至少有1个slave，数据复制和同步的延迟不能超过10秒
+
+如果说一旦所有的slave，数据复制和同步的延迟都超过了10秒钟，那么这个时候，master就不会再接收任何请求了
+
+上面两个配置可以减少异步复制和脑裂导致的数据丢失
+
+（1）减少异步复制的数据丢失
+
+有了min-slaves-max-lag这个配置，就可以确保说，一旦slave复制数据和ack延时太长，就认为可能master宕机后损失的数据太多了，那么就拒绝写请求，这样可以把master宕机时由于部分数据未同步到slave导致的数据丢失降低的可控范围内
+
+（2）减少脑裂的数据丢失
+
+如果一个master出现了脑裂，跟其他slave丢了连接，那么上面两个配置可以确保说，如果不能继续给指定数量的slave发送数据，而且slave超过10秒没有给自己ack消息，那么就直接拒绝客户端的写请求
+
+这样脑裂后的旧master就不会接受client的新数据，也就避免了数据丢失
+
+上面的配置就确保了，如果跟任何一个slave丢了连接，在10秒后发现没有slave给自己ack，那么就拒绝新的写请求
+
+因此在脑裂场景下，最多就丢失10秒的数据
+
+## 23_redis哨兵的多个核心底层原理的深入解析（包含slave选举算法）
+
+1、sdown和odown转换机制
+
+sdown和odown两种失败状态
+
+sdown是主观宕机，就一个哨兵如果自己觉得一个master宕机了，那么就是主观宕机
+
+odown是客观宕机，如果quorum数量的哨兵都觉得一个master宕机了，那么就是客观宕机
+
+sdown达成的条件很简单，如果一个哨兵ping一个master，超过了is-master-down-after-milliseconds指定的毫秒数之后，就主观认为master宕机
+
+sdown到odown转换的条件很简单，如果一个哨兵在指定时间内，收到了quorum指定数量的其他哨兵也认为那个master是sdown了，那么就认为是odown了，客观认为master宕机
+
+--- 
+
+2、哨兵集群的自动发现机制
+
+哨兵互相之间的发现，是通过redis的pub/sub系统实现的，每个哨兵都会往__sentinel__:hello这个channel里发送一个消息，这时候所有其他哨兵都可以消费到这个消息，并感知到其他的哨兵的存在
+
+每隔两秒钟，每个哨兵都会往自己监控的某个master+slaves对应的__sentinel__:hello channel里发送一个消息，内容是自己的host、ip和runid还有对这个master的监控配置
+
+每个哨兵也会去监听自己监控的每个master+slaves对应的__sentinel__:hello channel，然后去感知到同样在监听这个master+slaves的其他哨兵的存在
+
+每个哨兵还会跟其他哨兵交换对master的监控配置，互相进行监控配置的同步
+
+---
+
+3、slave配置的自动纠正
+
+哨兵会负责自动纠正slave的一些配置，比如slave如果要成为潜在的master候选人，哨兵会确保slave在复制现有master的数据; 如果slave连接到了一个错误的master上，比如故障转移之后，那么哨兵会确保它们连接到正确的master上
+
+---
+
+4、slave->master选举算法
+
+如果一个master被认为odown了，而且majority哨兵都允许了主备切换，那么某个哨兵就会执行主备切换操作，此时首先要选举一个slave来
+
+会考虑slave的一些信息
+
+（1）跟master断开连接的时长
+（2）slave优先级
+（3）复制offset
+（4）run id
+
+如果一个slave跟master断开连接已经超过了down-after-milliseconds的10倍，外加master宕机的时长，那么slave就被认为不适合选举为master
+
+(down-after-milliseconds * 10) + milliseconds_since_master_is_in_SDOWN_state
+
+接下来会对slave进行排序
+
+（1）按照slave优先级进行排序，slave priority越低，优先级就越高
+（2）如果slave priority相同，那么看replica offset，哪个slave复制了越多的数据，offset越靠后，优先级就越高
+（3）如果上面两个条件都相同，那么选择一个run id比较小的那个slave
+
+---
+
+5、quorum和majority
+
+每次一个哨兵要做主备切换，首先需要quorum数量的哨兵认为odown，然后选举出一个哨兵来做切换，这个哨兵还得得到majority哨兵的授权，才能正式执行切换
+
+如果quorum < majority，比如5个哨兵，majority就是3，quorum设置为2，那么就3个哨兵授权就可以执行切换
+
+但是如果quorum >= majority，那么必须quorum数量的哨兵都授权，比如5个哨兵，quorum是5，那么必须5个哨兵都同意授权，才能执行切换
+
+---
+
+6、configuration epoch
+
+哨兵会对一套redis master+slave进行监控，有相应的监控的配置
+
+执行切换的那个哨兵，会从要切换到的新master（salve->master）那里得到一个configuration epoch，这就是一个version号，每次切换的version号都必须是唯一的
+
+如果第一个选举出的哨兵切换失败了，那么其他哨兵，会等待failover-timeout时间，然后接替继续执行切换，此时会重新获取一个新的configuration epoch，作为新的version号
+
+---
+
+7、configuraiton传播
+
+哨兵完成切换之后，会在自己本地更新生成最新的master配置，然后同步给其他的哨兵，就是通过之前说的pub/sub消息机制
+
+这里之前的version号就很重要了，因为各种消息都是通过一个channel去发布和监听的，所以一个哨兵完成一次新的切换之后，新的master配置是跟着新的version号的
+
+其他的哨兵都是根据版本号的大小来更新自己的master配置的
+
+## 24_在项目中以经典的3节点方式部署哨兵集群
+1、哨兵的配置文件
+
+sentinel.conf
+
+最小的配置
+
+每一个哨兵都可以去监控多个maser-slaves的主从架构
+
+因为可能你的公司里，为不同的项目，部署了多个master-slaves的redis主从集群
+
+相同的一套哨兵集群，就可以去监控不同的多个redis主从集群
+
+你自己给每个redis主从集群分配一个逻辑的名称
+````
+sentinel monitor mymaster 127.0.0.1 6379 2
+sentinel down-after-milliseconds mymaster 60000
+sentinel failover-timeout mymaster 180000
+sentinel parallel-syncs mymaster 1
+
+sentinel monitor resque 192.168.1.3 6380 4
+sentinel down-after-milliseconds resque 10000
+sentinel failover-timeout resque 180000
+sentinel parallel-syncs resque 5
+
+sentinel monitor mymaster 127.0.0.1 6379 
+ ````
+类似这种配置，来指定对一个master的监控，给监控的master指定的一个名称，因为后面分布式集群架构里会讲解，可以配置多个master做数据拆分
+````
+sentinel down-after-milliseconds mymaster 60000
+sentinel failover-timeout mymaster 180000
+sentinel parallel-syncs mymaster 1
+````
+上面的三个配置，都是针对某个监控的master配置的，给其指定上面分配的名称即可
+
+上面这段配置，就监控了两个master node
+
+这是最小的哨兵配置，如果发生了master-slave故障转移，或者新的哨兵进程加入哨兵集群，那么哨兵会自动更新自己的配置文件
+
+sentinel monitor master-group-name hostname port quorum
+
+quorum的解释如下：
+
+（1）至少多少个哨兵要一致同意，master进程挂掉了，或者slave进程挂掉了，或者要启动一个故障转移操作
+（2）quorum是用来识别故障的，真正执行故障转移的时候，还是要在哨兵集群执行选举，选举一个哨兵进程出来执行故障转移操作
+（3）假设有5个哨兵，quorum设置了2，那么如果5个哨兵中的2个都认为master挂掉了; 2个哨兵中的一个就会做一个选举，选举一个哨兵出来，执行故障转移; 如果5个哨兵中有3个哨兵都是运行的，那么故障转移就会被允许执行
+
+down-after-milliseconds，超过多少毫秒跟一个redis实例断了连接，哨兵就可能认为这个redis实例挂了
+
+parallel-syncs，新的master别切换之后，同时有多少个slave被切换到去连接新master，重新做同步，数字越低，花费的时间越多
+
+假设你的redis是1个master，4个slave
+
+然后master宕机了，4个slave中有1个切换成了master，剩下3个slave就要挂到新的master上面去
+
+这个时候，如果parallel-syncs是1，那么3个slave，一个一个地挂接到新的master上面去，1个挂接完，而且从新的master sync完数据之后，再挂接下一个
+
+如果parallel-syncs是3，那么一次性就会把所有slave挂接到新的master上去
+
+failover-timeout，执行故障转移的timeout超时时长
+
+### 搭建一个哨兵集群
+[搭建一个哨兵集群](/src/main/resources/note/中间件/redisha/24_在项目中以经典的3节点方式部署哨兵集群.txt)
+
+## 25_对项目中的哨兵节点进行管理以及高可用redis集群的容灾演练
+
+1、哨兵节点的增加和删除
+
+增加sentinal，会自动发现
+
+删除sentinal的步骤
+
+1. 停止sentinal进程
+1. SENTINEL RESET *，在所有sentinal上执行，清理所有的master状态
+1. SENTINEL MASTER mastername，在所有sentinal上执行，查看所有sentinal对数量是否达成了一致
+
+--- 
+2、slave的永久下线
+
+让master摘除某个已经下线的slave：SENTINEL RESET mastername，在所有的哨兵上面执行
+
+---
+
+3、slave切换为Master的优先级
+
+slave->master选举优先级：slave-priority，值越小优先级越高
+
+--- 
+
+4、基于哨兵集群架构下的安全认证
+
+每个slave都有可能切换成master，所以每个实例都要配置两个指令
+
+master上启用安全认证，requirepass
+master连接口令，masterauth
+
+sentinal，sentinel auth-pass <master-group-name> <pass>
+
+---
+
+5、容灾演练
+
+通过哨兵看一下当前的master：SENTINEL get-master-addr-by-name mymaster
+
+把master节点kill -9掉，pid文件也删除掉
+
+查看sentinal的日志，是否出现+sdown字样，识别出了master的宕机问题; 然后出现+odown字样，就是指定的quorum哨兵数量，都认为master宕机了
+
+1. 三个哨兵进程都认为master是sdown了
+1. 超过quorum指定的哨兵进程都认为sdown之后，就变为odown
+1. 哨兵1是被选举为要执行后续的主备切换的那个哨兵
+1. 哨兵1去新的master（slave）获取了一个新的config version
+1. 尝试执行failover
+1. 投票选举出一个slave区切换成master，每隔哨兵都会执行一次投票
+1. 让salve，slaveof noone，不让它去做任何节点的slave了; 把slave提拔成master; 旧的master认为不再是master了
+1. 哨兵就自动认为之前的187:6379变成了slave了，19:6379变成了master了
+1. 哨兵去探查了一下187:6379这个salve的状态，认为它sdown了
+
+所有哨兵选举出了一个，来执行主备切换操作
+
+如果哨兵的majority都存活着，那么就会执行主备切换操作
+
+再通过哨兵看一下master：SENTINEL get-master-addr-by-name mymaster
+
+尝试连接一下新的master
+
+故障恢复，再将旧的master重新启动，查看是否被哨兵自动切换成slave节点
+
+（1）手动杀掉master
+（2）哨兵能否执行主备切换，将slave切换为master
+（3）哨兵完成主备切换后，新的master能否使用
+（4）故障恢复，将旧的master重新启动
+（5）哨兵能否自动将旧的master变为slave，挂接到新的master上面去，而且也是可以使用的
+
+6、哨兵的生产环境部署
+````
+daemonize yes
+logfile /var/log/sentinal/5000
+
+mkdir -p /var/log/sentinal/5000
+````
+
+## 26_redis如何在保持读写分离+高可用的架构下，还能横向扩容支撑1T+海量数据
+
+1、单机redis在海量数据面前的瓶颈
+
+master 和slave 数据是一样的, 他们同时保存的同一份数据
+
+2、怎么才能够突破单机瓶颈，让redis支撑海量数据？
+
+分布式 ,分片
+
+
+3、redis的集群架构
+
+redis cluster
+
+支撑N个redis master node，每个master node都可以挂载多个slave node
+
+读写分离的架构，对于每个master来说，写就写到master，然后读就从mater对应的slave去读
+
+高可用，因为每个master都有salve节点，那么如果mater挂掉，redis cluster这套机制，就会自动将某个slave切换成master
+
+redis cluster（多master + 读写分离 + 高可用）
+
+我们只要基于redis cluster去搭建redis集群即可，不需要手工去搭建replication复制+主从架构+读写分离+哨兵集群+高可用
+
+4、redis cluster vs. replication + sentinal
+
+如果你的数据量很少，主要是承载高并发高性能的场景，比如你的缓存一般就几个G，单机足够了
+
+replication，一个mater，多个slave，要几个slave跟你的要求的读吞吐量有关系，然后自己搭建一个sentinal集群，去保证redis主从架构的高可用性，就可以了
+
+redis cluster，主要是针对海量数据+高并发+高可用的场景，海量数据，如果你的数据量很大，那么建议就用redis cluster
+
+## 27_数据分布算法：hash+一致性hash+redis cluster的hash slot
+
+分布式数据存储的核心算法，数据分布的算法
+
+hash算法 -> 一致性hash算法（memcached） -> redis cluster，hash slot算法
+
+用不同的算法，就决定了在多个master节点的时候，数据如何分布到这些节点上去，解决这个问题
+
+---
+1、redis cluster介绍
+
+redis cluster
+
+（1）自动将数据进行分片，每个master上放一部分数据
+（2）提供内置的高可用支持，部分master不可用时，还是可以继续工作的
+
+在redis cluster架构下，每个redis要放开两个端口号，比如一个是6379，另外一个就是加10000的端口号，比如16379
+
+16379端口号是用来进行节点间通信的，也就是cluster bus的东西，集群总线。cluster bus的通信，用来进行故障检测，配置更新，故障转移授权
+
+cluster bus用了另外一种二进制的协议，主要用于节点间进行高效的数据交换，占用更少的网络带宽和处理时间
+
+---
+2、hash算法和弊端
+
+机器宕机大量缓存重建( 1/n 失效和 其他节点重建)
+
+---
+3、一致性hash算法
+
+自动缓存迁移(扩展和移除)+虚拟节点（自动负载均衡）
+
+---
+4、redis cluster的hash slot算法
+
+redis cluster有固定的16384个hash slot，对每个key计算CRC16值，然后对16384取模，可以获取key对应的hash slot
+
+redis cluster中每个master都会持有部分slot，比如有3个master，那么可能每个master持有5000多个hash slot
+
+hash slot让node的增加和移除很简单，增加一个master，就将其他master的hash slot移动部分过去，减少一个master，就将它的hash slot移动到其他master上去
+
+移动hash slot的成本是非常低的
+
+客户端的api，可以对指定的数据，让他们走同一个hash slot，通过hash tag来实现
+
+## 28_在项目中重新搭建一套读写分离+高可用+多master的redis cluster集群
+
+[在项目中重新搭建一套读写分离+高可用+多master的redis cluster集群](/src/main/resources/note/中间件/redisha/28_在项目中重新搭建一套读写分离+高可用+多master的redis cluster集群.txt)
+
+## 29_对项目的redis cluster实验多master写入、读写分离、高可用性

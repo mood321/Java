@@ -1,0 +1,277 @@
+
+你如果要对自己刚刚搭建好的redis做一个基准的压测，测一下你的redis的性能和QPS（query per second）
+
+redis自己提供的redis-benchmark压测工具，是最快捷最方便的，当然啦，这个工具比较简单，用一些简单的操作和场景去压测
+
+1、对redis读写分离架构进行压测，单实例写QPS+单实例读QPS
+
+redis-3.2.8/src
+
+./redis-benchmark -h 192.168.31.187
+
+-c <clients>       Number of parallel connections (default 50)
+-n <requests>      Total number of requests (default 100000)
+-d <size>          Data size of SET/GET value in bytes (default 2)
+
+根据你自己的高峰期的访问量，在高峰期，瞬时最大用户量会达到10万+，-c 100000，-n 10000000，-d 50
+
+各种基准测试，直接出来
+
+1核1G，虚拟机
+
+====== PING_INLINE ======
+  100000 requests completed in 1.28 seconds
+  50 parallel clients
+  3 bytes payload
+  keep alive: 1
+
+99.78% <= 1 milliseconds
+99.93% <= 2 milliseconds
+99.97% <= 3 milliseconds
+100.00% <= 3 milliseconds
+78308.54 requests per second
+
+====== PING_BULK ======
+  100000 requests completed in 1.30 seconds
+  50 parallel clients
+  3 bytes payload
+  keep alive: 1
+
+99.87% <= 1 milliseconds
+100.00% <= 1 milliseconds
+76804.91 requests per second
+
+====== SET ======
+  100000 requests completed in 2.50 seconds
+  50 parallel clients
+  3 bytes payload
+  keep alive: 1
+
+5.95% <= 1 milliseconds
+99.63% <= 2 milliseconds
+99.93% <= 3 milliseconds
+99.99% <= 4 milliseconds
+100.00% <= 4 milliseconds
+40032.03 requests per second
+
+====== GET ======
+  100000 requests completed in 1.30 seconds
+  50 parallel clients
+  3 bytes payload
+  keep alive: 1
+
+99.73% <= 1 milliseconds
+100.00% <= 2 milliseconds
+100.00% <= 2 milliseconds
+76628.35 requests per second
+
+====== INCR ======
+  100000 requests completed in 1.90 seconds
+  50 parallel clients
+  3 bytes payload
+  keep alive: 1
+
+80.92% <= 1 milliseconds
+99.81% <= 2 milliseconds
+99.95% <= 3 milliseconds
+99.96% <= 4 milliseconds
+99.97% <= 5 milliseconds
+100.00% <= 6 milliseconds
+52548.61 requests per second
+
+====== LPUSH ======
+  100000 requests completed in 2.58 seconds
+  50 parallel clients
+  3 bytes payload
+  keep alive: 1
+
+3.76% <= 1 milliseconds
+99.61% <= 2 milliseconds
+99.93% <= 3 milliseconds
+100.00% <= 3 milliseconds
+38684.72 requests per second
+
+====== RPUSH ======
+  100000 requests completed in 2.47 seconds
+  50 parallel clients
+  3 bytes payload
+  keep alive: 1
+
+6.87% <= 1 milliseconds
+99.69% <= 2 milliseconds
+99.87% <= 3 milliseconds
+99.99% <= 4 milliseconds
+100.00% <= 4 milliseconds
+40469.45 requests per second
+
+====== LPOP ======
+  100000 requests completed in 2.26 seconds
+  50 parallel clients
+  3 bytes payload
+  keep alive: 1
+
+28.39% <= 1 milliseconds
+99.83% <= 2 milliseconds
+100.00% <= 2 milliseconds
+44306.60 requests per second
+
+====== RPOP ======
+  100000 requests completed in 2.18 seconds
+  50 parallel clients
+  3 bytes payload
+  keep alive: 1
+
+36.08% <= 1 milliseconds
+99.75% <= 2 milliseconds
+100.00% <= 2 milliseconds
+45871.56 requests per second
+
+====== SADD ======
+  100000 requests completed in 1.23 seconds
+  50 parallel clients
+  3 bytes payload
+  keep alive: 1
+
+99.94% <= 1 milliseconds
+100.00% <= 2 milliseconds
+100.00% <= 2 milliseconds
+81168.83 requests per second
+
+====== SPOP ======
+  100000 requests completed in 1.28 seconds
+  50 parallel clients
+  3 bytes payload
+  keep alive: 1
+
+99.80% <= 1 milliseconds
+99.96% <= 2 milliseconds
+99.96% <= 3 milliseconds
+99.97% <= 5 milliseconds
+100.00% <= 5 milliseconds
+78369.91 requests per second
+
+====== LPUSH (needed to benchmark LRANGE) ======
+  100000 requests completed in 2.47 seconds
+  50 parallel clients
+  3 bytes payload
+  keep alive: 1
+
+15.29% <= 1 milliseconds
+99.64% <= 2 milliseconds
+99.94% <= 3 milliseconds
+100.00% <= 3 milliseconds
+40420.37 requests per second
+
+====== LRANGE_100 (first 100 elements) ======
+  100000 requests completed in 3.69 seconds
+  50 parallel clients
+  3 bytes payload
+  keep alive: 1
+
+30.86% <= 1 milliseconds
+96.99% <= 2 milliseconds
+99.94% <= 3 milliseconds
+99.99% <= 4 milliseconds
+100.00% <= 4 milliseconds
+27085.59 requests per second
+
+====== LRANGE_300 (first 300 elements) ======
+  100000 requests completed in 10.22 seconds
+  50 parallel clients
+  3 bytes payload
+  keep alive: 1
+
+0.03% <= 1 milliseconds
+5.90% <= 2 milliseconds
+90.68% <= 3 milliseconds
+95.46% <= 4 milliseconds
+97.67% <= 5 milliseconds
+99.12% <= 6 milliseconds
+99.98% <= 7 milliseconds
+100.00% <= 7 milliseconds
+9784.74 requests per second
+
+====== LRANGE_500 (first 450 elements) ======
+  100000 requests completed in 14.71 seconds
+  50 parallel clients
+  3 bytes payload
+  keep alive: 1
+
+0.00% <= 1 milliseconds
+0.07% <= 2 milliseconds
+1.59% <= 3 milliseconds
+89.26% <= 4 milliseconds
+97.90% <= 5 milliseconds
+99.24% <= 6 milliseconds
+99.73% <= 7 milliseconds
+99.89% <= 8 milliseconds
+99.96% <= 9 milliseconds
+99.99% <= 10 milliseconds
+100.00% <= 10 milliseconds
+6799.48 requests per second
+
+====== LRANGE_600 (first 600 elements) ======
+  100000 requests completed in 18.56 seconds
+  50 parallel clients
+  3 bytes payload
+  keep alive: 1
+
+0.00% <= 2 milliseconds
+0.23% <= 3 milliseconds
+1.75% <= 4 milliseconds
+91.17% <= 5 milliseconds
+98.16% <= 6 milliseconds
+99.04% <= 7 milliseconds
+99.83% <= 8 milliseconds
+99.95% <= 9 milliseconds
+99.98% <= 10 milliseconds
+100.00% <= 10 milliseconds
+5387.35 requests per second
+
+====== MSET (10 keys) ======
+  100000 requests completed in 4.02 seconds
+  50 parallel clients
+  3 bytes payload
+  keep alive: 1
+
+0.01% <= 1 milliseconds
+53.22% <= 2 milliseconds
+99.12% <= 3 milliseconds
+99.55% <= 4 milliseconds
+99.70% <= 5 milliseconds
+99.90% <= 6 milliseconds
+99.95% <= 7 milliseconds
+100.00% <= 8 milliseconds
+24869.44 requests per second
+
+
+
+大部分情况下来说，看你的服务器的机器性能和配置，机器越牛逼，配置越高
+
+单机上十几万，单机上二十万
+
+很多公司里，给一些低配置的服务器，操作复杂度
+
+大公司里，都是公司会提供统一的云平台，比如京东、腾讯、BAT、其他的一些、小米、美团
+
+虚拟机，低配
+
+搭建一些集群，专门为某个项目，搭建的专用集群，4核4G内存，比较复杂的操作，数据比较大
+
+几万，单机做到，差不多了
+
+redis提供的高并发，至少到上万，没问题
+
+几万~十几万/二十万不等
+
+QPS，自己不同公司，不同服务器，自己去测试，跟生产环境还有区别
+
+生产环境，大量的网络请求的调用，网络本身就有开销，你的redis的吞吐量就不一定那么高了
+
+QPS的两个杀手：一个是复杂操作，lrange，挺多的; value很大，2 byte，我之前用redis做大规模的缓存
+
+做商品详情页的cache，可能是需要把大串数据，拼接在一起，作为一个json串，大小可能都几k，几个byte
+
+2、水平扩容redis读节点，提升度吞吐量
+
+就按照上一节课讲解的，再在其他服务器上搭建redis从节点，单个从节点读请QPS在5万左右，两个redis从节点，所有的读请求打到两台机器上去，承载整个集群读QPS在10万+
