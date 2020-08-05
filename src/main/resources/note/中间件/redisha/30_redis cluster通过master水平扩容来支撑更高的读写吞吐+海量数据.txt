@@ -1,0 +1,84 @@
+
+redis cluster模式下，不建议做物理的读写分离了
+
+我们建议通过master的水平扩容，来横向扩展读写吞吐量，还有支撑更多的海量数据
+
+redis单机，读吞吐是5w/s，写吞吐2w/s
+
+扩展redis更多master，那么如果有5台master，不就读吞吐可以达到总量25/s QPS，写可以达到10w/s QPS
+
+redis单机，内存，6G，8G，fork类操作的时候很耗时，会导致请求延时的问题
+
+扩容到5台master，能支撑的总的缓存数据量就是30G，40G -> 100台，600G，800G，甚至1T+，海量数据
+
+redis是怎么扩容的
+
+1、加入新master
+
+mkdir -p /var/redis/7007
+
+port 7007
+cluster-enabled yes
+cluster-config-file /etc/redis-cluster/node-7007.conf
+cluster-node-timeout 15000
+daemonize	yes							
+pidfile		/var/run/redis_7007.pid 						
+dir 		/var/redis/7007		
+logfile /var/log/redis/7007.log
+bind 192.168.31.227		
+appendonly yes
+
+搞一个7007.conf，再搞一个redis_7007启动脚本
+
+手动启动一个新的redis实例，在7007端口上
+
+redis-trib.rb add-node 192.168.31.227:7007 192.168.31.187:7001
+
+redis-trib.rb check 192.168.31.187:7001
+
+连接到新的redis实例上，cluster nodes，确认自己是否加入了集群，作为了一个新的master
+
+2、reshard一些数据过去
+
+resharding的意思就是把一部分hash slot从一些node上迁移到另外一些node上
+
+redis-trib.rb reshard 192.168.31.187:7001
+
+要把之前3个master上，总共4096个hashslot迁移到新的第四个master上去
+
+How many slots do you want to move (from 1 to 16384)?
+
+1000
+
+3、添加node作为slave
+
+eshop-cache03
+
+mkdir -p /var/redis/7008
+
+port 7008
+cluster-enabled yes
+cluster-config-file /etc/redis-cluster/node-7008.conf
+cluster-node-timeout 15000
+daemonize	yes							
+pidfile		/var/run/redis_7008.pid 						
+dir 		/var/redis/7008		
+logfile /var/log/redis/7008.log
+bind 192.168.31.227		
+appendonly yes
+
+redis-trib.rb add-node --slave --master-id 28927912ea0d59f6b790a50cf606602a5ee48108 192.168.31.227:7008 192.168.31.187:7001
+
+4、删除node
+
+先用resharding将数据都移除到其他节点，确保node为空之后，才能执行remove操作
+
+redis-trib.rb del-node 192.168.31.187:7001 bd5a40a6ddccbd46a0f4a2208eb25d2453c2a8db
+
+2个是1365，1个是1366
+
+当你清空了一个master的hashslot时，redis cluster就会自动将其slave挂载到其他master上去
+
+redis-trib.rb reshard 192.168.31.187:7001
+
+这个时候就只要删除掉master就可以了
