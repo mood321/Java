@@ -92,9 +92,10 @@
    + nosql
      - [redis高并发](/src/main/resources/note/中间件/redis高并发.md)
                               
-   + 中间件
+   + 消息中间件
       - [消息队列(未)](/src/main/resources/note/中间件/消息中间件.md)
       - [从 0 开始带你成为消息中间件实战高手](/src/main/resources/note/中间件/从0开始带你成为消息中间件实战高手.md)
+      - [Kafka核心技术与实战](/src/main/resources/note/中间件/Kafka核心技术与实战.md)
       
    
    
