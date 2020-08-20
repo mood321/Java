@@ -629,8 +629,28 @@ Kafka 为消费者组定义了 5 种状态，它们分别是：Empty、Dead、Pr
 
 ## 28 | 主题管理知多少?
 
+Kafka 提供了自带的 kafka-topics 脚本，用于帮助用户创建主题。
 
+一个典型的创建命令如下：
 
+````
+   bin/kafka-topics.sh --bootstrap-server broker_host:port --create --topic my_topic_name  --partitions 1 --replication-factor 1
+
+````
+
+<img src="https://static001.geekbang.org/resource/image/6c/0e/6cdd08f0a74b05fa938817452e79120e.png">
+
+## 29 | Kafka动态配置了解下？
+
+动态 Broker 参数的使用场景都有哪些呢？实际上，因为不必重启 Broker，动态 Broker 参数的使用场景非常广泛，通常包括但不限于以下几种：
+
++ 动态调整 Broker 端各种线程池大小，实时应对突发流量。
++ 动态调整 Broker 端连接信息或安全配置信息。
++ 动态更新 SSL Keystore 有效期。
++ 动态调整 Broker 端 Compact 操作性能。
++ 实时变更 JMX 指标收集器 (JMX Metrics Reporter)。
+
+首先，Kafka 将动态 Broker 参数保存在 ZooKeeper 中
 
 
 
