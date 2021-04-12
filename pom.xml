@@ -138,7 +138,12 @@
             <artifactId>opencv</artifactId>
             <version>4.0.1-1.4.4</version>
         </dependency>
-
+        <!-- 分布式锁 redisson -->
+        <dependency>
+            <groupId>org.redisson</groupId>
+            <artifactId>redisson</artifactId>
+            <version>3.8.1</version>
+        </dependency>
         <!-- org.bytedeco.javacpp-presets.opencv的包已经传递依赖了当前包 -->
         <!-- <dependency>
             <groupId>org.bytedeco</groupId>
