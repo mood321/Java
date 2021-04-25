@@ -144,6 +144,13 @@
             <artifactId>redisson</artifactId>
             <version>3.8.1</version>
         </dependency>
+        <!-- zk 分布式锁 curator  -->
+        <dependency>
+            <groupId>org.apache.curator</groupId>
+            <artifactId>curator-recipes</artifactId>
+            <version>4.2.0</version>
+        </dependency>
+
         <!-- org.bytedeco.javacpp-presets.opencv的包已经传递依赖了当前包 -->
         <!-- <dependency>
             <groupId>org.bytedeco</groupId>
