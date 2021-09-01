@@ -63,9 +63,9 @@
               - [java多线程学习笔记](/src/main/resources/note/Java多线程学习笔记-多线程.md)
                        
         - 锁
-              - [RedissonDemo](/src/main/java/lock/redisson/RedissonDemo.java)
-              - [RedissonDemo](/src/main/java/lock/redisson/ReentrantLockDemo.java)
-              - [CuratorDemo](/src/main/java/lock/redisson/CuratorDemo.java)
+             - [RedissonDemo](/src/main/java/lock/redisson/RedissonDemo.java)
+             - [ReentrantLockDemo](/src/main/java/lock/redisson/ReentrantLockDemo.java)
+             - [CuratorDemo](/src/main/java/lock/redisson/CuratorDemo.java)
 
 
         - java多线程线程池和JUC学习笔记
