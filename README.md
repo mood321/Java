@@ -62,6 +62,12 @@
         - 添加java多线程学习笔记
               - [java多线程学习笔记](/src/main/resources/note/Java多线程学习笔记-多线程.md)
                        
+        - 锁
+              - [RedissonDemo](/src/main/java/lock/redisson/RedissonDemo.java)
+              - [RedissonDemo](/src/main/java/lock/redisson/ReentrantLockDemo.java)
+              - [CuratorDemo](/src/main/java/lock/redisson/CuratorDemo.java)
+
+
         - java多线程线程池和JUC学习笔记
               - [java多线程线程池和JUC学习笔记](/src/main/resources/note/Java多线程学习笔记-线程池.md)
                        
@@ -74,18 +80,17 @@
              - [面试题-3](/src/main/resources//note/mianshi/面试题-3.md)
              - [面试题-1](/src/main/resources//note/mianshi/面试题-1.md)
          
-        -  java 设计模式
+        - java 设计模式
               - [java 设计模式](/src/main/resources/note/设计模式笔记.md)
                                       
         - java 算法部分学习笔记
+          
             <ul><p> <a href="/src/main/resources/note/Algorithm/算法学习笔记.md">算法部分学习笔记</a> 
             <li><p> <a href="/src/main/resources/note/Algorithm/算法学习基本数据结构和算法原型.md">算法学习基本数据结构和算法原型</a>    
             <li> <p> <a href="/src/main/resources/note/Algorithm/数据结构与算法之美.md">数据结构与算法之美(未)</a> 
             <li> <p> <a href="/src/main/resources/note/Algorithm/程序员面试.md">程序员面试(未)</a> 
             <li> <p> <a href="/src/main/resources/note/Algorithm/LeetCode.md">LeetCode(未)</a> 
-            <li> <p> <a href="/src/main/java/offer">剑指offer 部分实例(未)</a> 
-       
-                               
+            <li> <p> <a href="/src/main/java/offer">剑指offer 部分实例(未)</a>                                
    + sql
      - [mysql45讲](/src/main/resources/note/sql/sql45讲.md)
      
