@@ -1,11 +1,11 @@
-package algorithm.advanced07;
+package algorithm.Interview.practice06;
 
 /**
  * @author mood321
  * @date 2021/10/27 23:48
  * @email 371428187@qq.com
  */
-public class Code_01_Exchange {
+public class P_5_1_Exchange {
     /**
      *  相加  和3,5 毫升水瓶 求4一样
      * @param m
