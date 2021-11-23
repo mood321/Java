@@ -21,7 +21,7 @@ public class P_5_2_GetMax {
         int returnA = dif * sm + sd * sc;
         int returnB = flip(returnA);
 
-        return returnA*sm+returnB*sn;
+        return returnA*m+returnB*n;
     }
 
     /**
