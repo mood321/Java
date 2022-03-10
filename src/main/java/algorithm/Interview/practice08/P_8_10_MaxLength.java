@@ -1,6 +1,5 @@
 package algorithm.Interview.practice08;
 
-import scala.Int;
 
 import java.util.HashMap;
 

@@ -167,7 +167,31 @@
             <artifactId>curator-recipes</artifactId>
             <version>4.2.0</version>
         </dependency>
+        <!-- disruptor  -->
+        <dependency>
+            <groupId>com.lmax</groupId>
+            <artifactId>disruptor</artifactId>
+            <version>3.4.4</version>
+        </dependency>
 
+
+        <!-- kafka   -->
+        <dependency>
+            <groupId>org.apache.kafka</groupId>
+            <artifactId>kafka_2.12</artifactId>
+            <version>1.0.0</version>
+            <scope>provided</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.apache.kafka</groupId>
+            <artifactId>kafka-clients</artifactId>
+            <version>1.0.0</version>
+        </dependency>
+        <dependency>
+            <groupId>org.apache.kafka</groupId>
+            <artifactId>kafka-streams</artifactId>
+            <version>1.0.0</version>
+        </dependency>
         <!-- org.bytedeco.javacpp-presets.opencv的包已经传递依赖了当前包 -->
         <!-- <dependency>
             <groupId>org.bytedeco</groupId>
