@@ -110,5 +110,6 @@
       - [深入浅出计算机组成原理](/src/main/resources/note/linux/深入浅出计算机组成原理.md)
       - [趣谈Linux操作系统](/src/main/resources/note/linux/趣谈Linux操作系统.md)
       - [编译原理之美(未)](/src/main/resources/note/compile/编译yuan理之美.md)
-                              
-   
+
+   + 分布式理论
+       - [MIT6.824](src/main/resources/note/mit6.824/raft.md)
