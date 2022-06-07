@@ -53,8 +53,10 @@
                       
    +   其他语言
          - Python
-                     -[Python](https://github.com/mood321/Python)     
-                      
+                     -[Python](https://github.com/mood321/Python)
+         - Go
+              -[Go](https://github.com/mood321/Go)
+
    +   学习笔记
    
         - 添加jvm笔记
