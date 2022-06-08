@@ -117,7 +117,7 @@ Zookeeper有一个操作类型是sync，它本质上就是一个写请求
 
 所有的client 向zk发送操作的顺序，和这些操作被执行的顺序，是一致的
 
-<img src="![image.png](image.png)"> 
+<img src="/src/main/resources/note/mit6.824/image.png"> 
 
 保证 每个client的“写”的顺序在zk执行的是一致的 操作的原子性用“ready file”来实现
 
@@ -212,7 +212,7 @@ CRAQ是对于一个叫链式复制（Chain Replication）的旧方案的改进,�
 
 ，Zookeeper为了能够从任意副本执行读请求，不得不牺牲数据的实时性，因此也就不是线性一致的。CRAQ却可以从任意副本执行读请求，同时也保留线性一致性
 
-<img src="![img.png](img.png)">
+<img src="/src/main/resources/note/mit6.824/img.png">
 
 这里只是Chain Replication，并不是CRAQ。Chain Replication本身是线性一致的,在没有故障,他是一致的
 
