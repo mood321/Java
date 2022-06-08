@@ -115,3 +115,141 @@ Zookeeper有一个操作类型是sync，它本质上就是一个写请求
 
 ### 8.7 就绪文件（Ready file/znode）
 
+所有的client 向zk发送操作的顺序，和这些操作被执行的顺序，是一致的
+
+<img src="![image.png](image.png)"> 
+
+保证 每个client的“写”的顺序在zk执行的是一致的 操作的原子性用“ready file”来实现
+
+写的时候:
+
++ 大致的思想是，要操作到某个数据，先检查对于的标记“ready file”是否存在，存在才能操作
++ 在修改对应的数据的时候，会先删除这个“ready file”标记，修改完再create 这个"ready file"( 在)
+
+读的时候:
+
+判断"ready file"是否存在(在写读混合模式下)
+
++ 存在,说明之前的写操作已经执行,直接读
++ 不存在,这个客户端会在特定(zxid)上面建立watch事件监听,后续有操作,他再尝试读取
+
+                                                                                                                                                                                                                              
+### 9.1 Zookeeper API
+
+Zookeeper的特点：
++ Zookeeper基于（类似于）Raft框架，所以我们可以认为它是，当然它的确是容错的，它在发生网络分区的时候，也能有正确的行为。
++ 当我们在分析各种Zookeeper的应用时，我们也需要记住Zookeeper有一些性能增强，使得读请求可以在任何副本被处理，因此，可能会返回旧数据。
++ 另一方面，Zookeeper可以确保一次只处理一个写请求，并且所有的副本都能看到一致的写请求顺序。这样，所有副本的状态才能保证是一致的（写请求会改变状态，一致的写请求顺序可以保证状态一致）。
++ 由一个客户端发出的所有读写请求会按照客户端发出的顺序执行。
++ 一个特定客户端的连续请求，后来的请求总是能看到相比较于前一个请求相同或者更晚的状态（详见8.5 FIFO客户端序列）
+
+Zookeeper的目标是解决什么问题，或者期望用来解决什么问题？
+
++ 对于我来说，使用Zookeeper的一个主要原因是，它可以是一个VMware FT所需要的Test-and-Set服务（详见4.7）的实现。Test-and-Set服务在发生主备切换时是必须存在的，但是在VMware FT论文中对它的描述却又像个谜一样，论文里没有介绍：这个服务究竟是什么，它是容错的吗，它能容忍网络分区吗？Zookeeper实际的为我们提供工具来写一个容错的，完全满足VMware FT要求的Test-and-Set服务，并且可以在网络分区时，仍然有正确的行为。这是Zookeeper的核心功能之一。
++ 使用Zookeeper还可以做很多其他有用的事情。其中一件是，人们可以用它来发布其他服务器使用的配置信息。例如，向某些Worker节点发布当前Master的IP地址。
++ 另一个Zookeeper的经典应用是选举Master。当一个旧的Master节点故障时，哪怕说出现了网络分区，我们需要让所有的节点都认可同一个新的Master节点。
++ 如果新选举的Master需要将其状态保持到最新，比如说GFS的Master需要存储对于一个特定的Chunk的Primary节点在哪，现在GFS的Master节点可以将其存储在Zookeeper中，并且知道Zookeeper不会丢失这个信息。当旧的Master崩溃了，一个新的Master被选出来替代旧的Master，这个新的Master可以直接从Zookeeper中读出旧Master的状态。
++ 其他还有，对于一个类似于MapReduce的系统，Worker节点可以通过在Zookeeper中创建小文件来注册自己。
++ 同样还是类似于MapReduce这样的系统，你可以设想Master节点通过向Zookeeper写入具体的工作，之后Worker节点从Zookeeper中一个一个的取出工作，执行，完成之后再删除工作。
+
+Zookeeper以RPC的方式暴露以下API。
+
++ CREATE(PATH，DATA，FLAG)。入参分别是文件的全路径名PATH，数据DATA，和表明znode类型的FLAG。这里有意思的是，CREATE的语义是排他的。也就是说，如果我向Zookeeper请求创建一个文件，如果我得到了yes的返回，那么说明这个文件之前不存在，我是第一个创建这个文件的客户端；如果我得到了no或者一个错误的返回，那么说明这个文件之前已经存在了。所以，客户端知道文件的创建是排他的。在后面有关锁的例子中，我们会看到，如果有多个客户端同时创建同一个文件，实际成功创建文件（获得了锁）的那个客户端是可以通过CREATE的返回知道的。
++ DELETE(PATH，VERSION)。入参分别是文件的全路径名PATH，和版本号VERSION。有一件事情我之前没有提到，每一个znode都有一个表示当前版本号的version，当znode有更新时，version也会随之增加。对于delete和一些其他的update操作，你可以增加一个version参数，表明当且仅当znode的当前版本号与传入的version相同，才执行操作。当存在多个客户端同时要做相同的操作时，这里的参数version会非常有帮助（并发操作不会被覆盖）。所以，对于delete，你可以传入一个version表明，只有当znode版本匹配时才删除。
++ EXIST(PATH，WATCH)。入参分别是文件的全路径名PATH，和一个有趣的额外参数WATCH。通过指定watch，你可以监听对应文件的变化。不论文件是否存在，你都可以设置watch为true，这样Zookeeper可以确保如果文件有任何变更，例如创建，删除，修改，都会通知到客户端。此外，判断文件是否存在和watch文件的变化，在Zookeeper内是原子操作。所以，当调用exist并传入watch为true时，不可能在Zookeeper实际判断文件是否存在，和建立watch通道之间，插入任何的创建文件的操作，这对于正确性来说非常重要。
++ GETDATA(PATH，WATCH)。入参分别是文件的全路径名PATH，和WATCH标志位。这里的watch监听的是文件的内容的变化。
++ SETDATA(PATH，DATA，VERSION)。入参分别是文件的全路径名PATH，数据DATA，和版本号VERSION。如果你传入了version，那么Zookeeper当且仅当文件的版本号与传入的version一致时，才会更新文件。
++ LIST(PATH)。入参是目录的路径名，返回的是路径下的所有文件。
+
+### 9.2 使用Zookeeper实现计数器
+
+zk 的多客户端,get->put 操作不是原子的
+     
+<pre>
+WHILE TRUE:
+    X, V = GETDATA("F")
+    IF SETDATA("f", X + 1, V):
+        BREAK
+</pre>
+
+这是通常写法, 但这种写法值在低负载的场景使用, 因为他重试的次数和客户端多少挂钩,复杂度是 O(n^2)
+
+### 9.3 使用Zookeeper实现非扩展锁
+
+<pre>
+WHILE TRUE:
+    IF CREATE("f", data, ephemeral=TRUE): RETURN
+    IF EXIST("f", watch=TRUE):
+        WAIT
+</pre>
+
+一般来说会尝试去创建:
++ 成功,加锁成功
++ 失败,会在节点上加watch 监听 ,直到之前成功的del
+
+但监听会有和上面,累加的场景一样的问题 ,在del的时候 会有羊群效应,一般解决方案是,watch 序号节点,给他排队(见9.4)
+
+### 9.4 使用Zookeeper实现可扩展锁
+<pre>
+CREATE("f", data, sequential=TRUE, ephemeral=TRUE)
+WHILE TRUE:
+    LIST("f*")
+    IF NO LOWER #FILE: RETURN
+    IF EXIST(NEXT LOWER #FILE, watch=TRUE):
+        WAIT
+</pre>
+
+这有问题,就是 中间序号的客户端节点 如果挂了, 或者持有锁挂了, 这种可以依赖,zk的临时znode自动del的机制做
+
+
+
+### 9.5 链复制（Chain Replication）(CRAQ)
+
++ 第一个是它通过复制实现了容错；
++ 第二是它通过以链复制API请求这种有趣的方式，提供了与Raft相比不一样的属性。
+
+CRAQ是对于一个叫链式复制（Chain Replication）的旧方案的改进,有许多系统使用了他
+
+，Zookeeper为了能够从任意副本执行读请求，不得不牺牲数据的实时性，因此也就不是线性一致的。CRAQ却可以从任意副本执行读请求，同时也保留线性一致性
+
+<img src="![img.png](img.png)">
+
+这里只是Chain Replication，并不是CRAQ。Chain Replication本身是线性一致的,在没有故障,他是一致的
+
+从全局看,只有一个请求,tail 尾节点处理完了,才算commit,读请求才能读到,意味着链条上所有节点都成功
+
+### 9.6 链复制的故障恢复（Fail Recover）
+
+在这个模式下 只有两种可能
+
++ 一种没有故障,tail 处理完成,commit
++ 一种中间链表节点有一个出现故障, 链表后面的都没有
+
+- 如果HEAD出现故障，作为最接近的服务器，下一个节点可以接手成为新的HEAD，并不需要做任何其他的操作。对于还在处理中的请求，可以分为两种情况：
+
+  + 对于任何已经发送到了第二个节点的写请求，不会因为HEAD故障而停止转发，它会持续转发直到commit。
+  + 如果写请求发送到HEAD，在HEAD转发这个写请求之前HEAD就故障了，那么这个写请求必然没有commit，也必然没有人知道这个写请求，我们也必然没有向发送这个写请求的客户端确认这个请求，因为写请求必然没能送到TAIL。所以，对于只送到了HEAD，并且在HEAD将其转发前HEAD就故障了的写请求，我们不必做任何事情。或许客户端会重发这个写请求，但是这并不是我们需要担心的问题。
+
+- 如果TAIL出现故障，处理流程也非常相似，TAIL的前一个节点可以接手成为新的TAIL。所有TAIL知道的信息，TAIL的前一个节点必然都知道，因为TAIL的所有信息都是其前一个节点告知的
+- 中间节点出现问题就去除故障节点
+
+Chain Replication与Raft进行对比，有以下差别：
++ 从性能上看，raft的leader 需要处理所有副本,Chain Replication只需要处理后继节点 ,所有性能瓶颈来的更晚
++ raft 的读写都会从leader, CRAQ,写请求走head ,读请求是tail节点发的,所以压力分摊了
++ 故障恢复，Chain Replication也比Raft更加简单,这是主要动力
+
+### 9.7 链复制的配置管理器（Configuration Manager）
+
+CRAQ 并不能处理脑裂和网络分区 ,这意味它不能单独使用。
+
+总是会有一个外部的权威（External Authority）来决定谁是活的，谁挂了，并确保所有参与者都认可由哪些节点组成一条链，这样在链的组成上就不会有分歧。这个外部的权威通常称为Configuration Manager。
+
+有一个基于Raft或者Paxos的Configuration Manager，它是容错的，也不会受脑裂的影响。
+
+之后，通过一系列的配置更新通知，Configuration Manager将数据中心内的服务器分成多个链。
+
+比如说，Configuration Manager决定链A由服务器S1，S2，S3组成，链B由服务器S4，S5，S6组成。
+### 10.1 Aurora 背景历史
+
+### 10.2 故障可恢复事务（Crash Recoverable Transaction）
+
