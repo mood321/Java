@@ -1,4 +1,4 @@
-_## 学习MIT 6.824 部分笔记
+## 学习MIT 6.824 部分笔记
 
 之前笔记找时间补上
 
@@ -264,7 +264,7 @@ Aurora 实际上主要关注的是，如何实现一个故障可恢复事务（C
 
 在写数据的时候,并不会直接写磁盘 还在本地缓存(change buffer) , 在事务提交前,都会写WAL (mysql redo log),日志落盘,顺序写入一般
 
-<img src="src/main/resources/note/mit6.824/mysqlupdate.png">
+<img src="/src/main/resources/note/mit6.824/mysqlupdate.png">
  
 <pre>
 ps:   mysql 实现,非唯一索引,在操作的的时候回存到 change buffer( change buffer会落盘), 之后merge 进磁盘, 维护了二级索引
