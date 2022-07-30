@@ -115,4 +115,5 @@
 
    + 分布式理论
        - [MIT6.824](src/main/resources/note/mit6.824/raft.md)
+       - [MIT6.s081 - 操作系统](src/main/resources/note/mit6-s081/mit6-s081.md)
        - [设计数据密集型应用](src/main/resources/note/ddia/ddia.md)
