@@ -16,9 +16,9 @@ import java.io.IOException;
 public class Tess4JTest {
     public static void main(String[] args){
 
-        String path = "D://Java//Tess4J";		//我的图片路径
+        String path = "D://tem";		//我的图片路径
 
-        File file = new File(path + "//photo.jpg");
+        File file = new File(path + "//tt3.jpg");
         ITesseract instance = new Tesseract();
 
         /**
@@ -33,7 +33,9 @@ public class Tess4JTest {
         }
 
         //设置训练库的位置
-        instance.setDatapath(courseFile + "//tessdata");
+        String s = Tess4JTest.class.getResource("/").getPath().replaceFirst("/","") + "tessdata";
+        System.out.println(s);
+        instance.setDatapath(s);
 
         instance.setLanguage("eng");//chi_sim ：简体中文， eng	根据需求选择语言库
         String result = null;

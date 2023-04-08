@@ -20,12 +20,12 @@ public class FaceVideo {
 
     static {
         System.loadLibrary(Core.NATIVE_LIBRARY_NAME);
-        faceDetector = new CascadeClassifier("D:\\Projects\\opencv\\sources\\data\\haarcascades\\haarcascade_frontalface_alt.xml");
+        faceDetector = new CascadeClassifier("D:\\Program\\opencv\\sources\\data\\haarcascades\\haarcascade_frontalface_alt.xml");
     }
 
     public static void main(String[] args) {
         // 1- 从摄像头实时人脸识别，识别成功保存图片到本地
-        getVideoFromCamera();
+      //  getVideoFromCamera();
 
         // 2- 从本地视频文件中识别人脸
 //        getVideoFromFile();
@@ -34,8 +34,8 @@ public class FaceVideo {
        // face();
 
         // 4- 比对本地2张图的人脸相似度 （越接近1越相似）
-        String basePicPath = "D:\\www\\img\\";
-        double compareHist = compare_image(basePicPath + "fc.jpg", basePicPath + "fc_1.png");
+        String basePicPath = "D:\\tem\\img\\";
+        double compareHist = compare_image(basePicPath + "fc_3.jpg", basePicPath + "fc_4.jpg");
         System.out.println(compareHist);
         if (compareHist > 0.72) {
             System.out.println("人脸匹配");
